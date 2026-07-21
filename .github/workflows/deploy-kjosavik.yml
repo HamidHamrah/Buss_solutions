@@ -1,14 +1,14 @@
 name: Deploy Kjosavik frontend
 
-# Bus_Solution serves multiple customers from one repo, so this workflow is
-# scoped to exactly one of them (customer slug + Cloudflare Worker name are
-# hardcoded below, matching customers/kjosavik/config.json's own values) —
-# see scripts/stamp-deploy.mjs if those two ever need to be kept in sync.
-# The backend deploys separately via Render's own git integration; this only
-# covers the static frontend, which had no automation before.
+# Bus_Solution serves multiple customers from one repo. This workflow only
+# triggers on pushes to deploy/kjosavik (not main), so it never fires for
+# other customers' changes — see .github/workflows/promote.yml, which is the
+# only thing that pushes to this branch. The backend deploys separately via
+# Render's own git integration (see render.yaml's per-service `branch:`),
+# which follows the same one-customer-per-branch gating.
 on:
   push:
-    branches: [main]
+    branches: [deploy/kjosavik]
     paths-ignore:
       - 'backend/**'
 

@@ -1,0 +1,47 @@
+name: Deploy Team Tour frontend (staging)
+
+# Bus_Solution serves multiple customers from one repo. This workflow only
+# triggers on pushes to deploy/teamtour (not main), so it never fires for
+# other customers' changes — see .github/workflows/promote.yml, which is the
+# only thing that pushes to this branch. The backend deploys separately via
+# Render's own git integration (see render.yaml's per-service `branch:`),
+# which follows the same one-customer-per-branch gating.
+#
+# Deploys under the "-staging" Worker name — team-tour (no suffix) is already
+# a live Cloudflare Worker under the separate Team_tour repo, so this must
+# not collide with it until an explicit future cutover.
+on:
+  push:
+    branches: [deploy/teamtour]
+    paths-ignore:
+      - 'backend/**'
+
+env:
+  CUSTOMER_SLUG: teamtour
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build (runs apply-customer.mjs via the npm prebuild hook)
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE_TEAMTOUR }}
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          wranglerVersion: '4'
+          command: deploy --name team-tour-staging

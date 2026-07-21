@@ -1,7 +1,27 @@
+# Multi-service Blueprint: one service + database per customer, each pinned to
+# its own deploy/<slug> branch so a Render redeploy only ever affects that one
+# customer. See scripts/stamp-deploy.mjs's comment header for why this file is
+# no longer stamped per-deploy — it's now a static, permanent definition.
+#
+# Kjosavik is the real, already-live service/DB — untouched below. Nidaros,
+# Team Tour, and Haga each already have their OWN live Render service under
+# their original standalone repos using the exact renderServiceName values in
+# customers/<slug>/config.json's deployment block — reusing those names here
+# would risk Render adopting/repointing those real services. So these three
+# use a "-staging" suffix until an explicit future decision to cut over.
+databases:
+  - name: nidaros-staging-db
+    plan: free
+  - name: team-tour-staging-db
+    plan: free
+  - name: haga-staging-db
+    plan: free
+
 services:
   - name: kjosavik-reiser-api
     type: web
     runtime: docker
+    branch: deploy/kjosavik
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     plan: free
@@ -39,6 +59,144 @@ services:
         value: Kjosavik Reiser AS
       - key: Email__NotifyTo
         value: post@kjosavikreiser.no
+      - key: Twilio__AccountSid
+        sync: false
+      - key: Twilio__AuthToken
+        sync: false
+      - key: Twilio__FromNumber
+        sync: false
+
+  - name: nidaros-turbuss-api-staging
+    type: web
+    runtime: docker
+    branch: deploy/nidaros
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Customer__Slug
+        value: nidaros
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: nidaros-staging-db
+          property: connectionString
+      - key: Cors__AllowedOrigins__0
+        value: https://nidaros-turbuss-staging.s362052.workers.dev
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: nidaros-api
+      - key: Jwt__Audience
+        value: nidaros-web
+      - key: Email__Host
+        sync: false
+      - key: Email__Port
+        sync: false
+      - key: Email__Username
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__FromAddress
+        value: firmapost@nidarostour.no
+      - key: Email__FromName
+        value: Nidaros Turbuss AS
+      - key: Email__NotifyTo
+        value: firmapost@nidarostour.no
+      - key: Twilio__AccountSid
+        sync: false
+      - key: Twilio__AuthToken
+        sync: false
+      - key: Twilio__FromNumber
+        sync: false
+
+  - name: team-tour-api-staging
+    type: web
+    runtime: docker
+    branch: deploy/teamtour
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Customer__Slug
+        value: teamtour
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: team-tour-staging-db
+          property: connectionString
+      - key: Cors__AllowedOrigins__0
+        value: https://team-tour-staging.s362052.workers.dev
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: team-tour-api
+      - key: Jwt__Audience
+        value: team-tour-web
+      - key: Email__Host
+        sync: false
+      - key: Email__Port
+        sync: false
+      - key: Email__Username
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__FromAddress
+        value: post@teamtour.no
+      - key: Email__FromName
+        value: Team Tour AS
+      - key: Email__NotifyTo
+        value: post@teamtour.no
+      - key: Twilio__AccountSid
+        sync: false
+      - key: Twilio__AuthToken
+        sync: false
+      - key: Twilio__FromNumber
+        sync: false
+
+  - name: haga-turbusser-api-staging
+    type: web
+    runtime: docker
+    branch: deploy/haga
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: Customer__Slug
+        value: haga
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: haga-staging-db
+          property: connectionString
+      - key: Cors__AllowedOrigins__0
+        value: https://haga-turbusser-staging.s362052.workers.dev
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: haga-api
+      - key: Jwt__Audience
+        value: haga-web
+      - key: Email__Host
+        sync: false
+      - key: Email__Port
+        sync: false
+      - key: Email__Username
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__FromAddress
+        value: post@hagakrs.no
+      - key: Email__FromName
+        value: Haga Turbusser
+      - key: Email__NotifyTo
+        value: post@hagakrs.no
       - key: Twilio__AccountSid
         sync: false
       - key: Twilio__AuthToken

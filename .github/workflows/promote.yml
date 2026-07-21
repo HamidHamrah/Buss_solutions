@@ -1,0 +1,49 @@
+name: Promote main to customer(s)
+
+# The only thing that ever pushes to a deploy/<slug> branch. Moving that
+# branch forward is what triggers a customer's Render + Cloudflare redeploy
+# (see render.yaml's per-service `branch:` and the deploy-*.yml workflows'
+# trigger branches) — so this is the canary/staged-rollout lever: promote one
+# customer, watch it, then promote the rest individually or all at once.
+#
+# Always a plain (non-force) push, since nothing should ever commit directly
+# to a deploy/<slug> branch — if a plain push isn't a fast-forward, that
+# means something unexpected landed on the branch, and this fails loudly
+# instead of silently overwriting it.
+on:
+  workflow_dispatch:
+    inputs:
+      customer:
+        description: 'Which customer to promote'
+        required: true
+        type: choice
+        options:
+          - kjosavik
+          - nidaros
+          - teamtour
+          - haga
+          - all
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Promote selected customer(s)
+        run: |
+          set -e
+          ALL_SLUGS="kjosavik nidaros teamtour haga"
+          if [ "${{ inputs.customer }}" = "all" ]; then
+            SLUGS="$ALL_SLUGS"
+          else
+            SLUGS="${{ inputs.customer }}"
+          fi
+          for slug in $SLUGS; do
+            echo "Promoting main -> deploy/$slug"
+            git push origin "main:deploy/$slug"
+          done
