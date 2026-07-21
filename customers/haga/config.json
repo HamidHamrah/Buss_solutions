@@ -1,0 +1,168 @@
+{
+  "slug": "haga",
+  "identity": {
+    "companyName": "Haga Turbusser",
+    "brandNamePrimary": "Haga",
+    "brandNameSecondary": "Turbusser",
+    "domain": "https://haga-turbusser.s362052.workers.dev",
+    "orgNr": "",
+    "phone": "930 69 411",
+    "email": "post@hagakrs.no",
+    "address": "Mjåvannsvegen 74, 4628 Kristiansand",
+    "foundingYear": "",
+    "geoLat": 58.1467,
+    "geoLng": 7.9956,
+    "openingHoursDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "openingHoursOpen": "07:00",
+    "openingHoursClose": "17:00",
+    "openingHoursText": "Man–fre: 07:00–17:00",
+    "emergencyAvailabilityText": "Beredskapsvakt: 24/7",
+    "footerCertifications": ["Euro 5 & 6", "5 turbusser i flåten", "Kristiansand"]
+  },
+  "social": {
+    "facebook": "",
+    "instagram": "",
+    "linkedin": ""
+  },
+  "seo": {
+    "metaTitle": "Haga Turbusser – Turbuss og minibuss",
+    "metaDescription": "Haga Turbusser tilbyr leie av turbuss og minibuss med sjåfør fra Kristiansand. Flyplassturer, skoleturer, firmaturer, bryllupstransport og charterturer.",
+    "ogSiteName": "Haga Turbusser"
+  },
+  "assets": {
+    "logo": "logo.png",
+    "favicon": "favicon.svg",
+    "ogImage": "og-image.jpg"
+  },
+  "adminSeed": {
+    "initialPhone": "90000000",
+    "initialPassword": "Test123!",
+    "adminFirstName": "Admin",
+    "adminLastName": "Haga Turbusser"
+  },
+  "pricing": {
+    "kmRate": 18,
+    "hourRate": 850,
+    "nightSurcharge": 40,
+    "weekendSurcharge": 40,
+    "deadMileageRate": 20,
+    "deadMileageRadiusKm": 30,
+    "vatPercent": 12,
+    "minInvoice": 3000
+  },
+  "priceCategories": [
+    { "name": "Minibuss", "kmRate": 14, "hourRate": 650, "sortOrder": 1 },
+    { "name": "Stor buss", "kmRate": 22, "hourRate": 1100, "sortOrder": 2 },
+    { "name": "Dobbeldekker VIP", "kmRate": 26, "hourRate": 1300, "sortOrder": 3 }
+  ],
+  "fleet": [
+    {
+      "externalId": "mercedes-minibuss",
+      "name": "Mercedes Minibuss",
+      "seats": 20,
+      "priceCategory": "Minibuss",
+      "description": "Vendbar minibuss for mindre grupper og korte turer, med regulerbare seter og TV-skjerm.",
+      "images": ["https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=600&q=80"],
+      "amenities": ["Justerbare seter", "DVD og TV-skjerm"],
+      "sortOrder": 1
+    },
+    {
+      "externalId": "scania-touring",
+      "name": "Scania Touring",
+      "seats": 57,
+      "priceCategory": "Stor buss",
+      "description": "Komfortabel turbuss for dagsturer og lengre reiser, godt utstyrt med toalett og kjøkkenfasiliteter.",
+      "images": ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"],
+      "amenities": ["Justerbare seter", "Toalett", "Kaffemaskin", "Kjøleskap", "TV-skjerm m/USB/HDMI", "USB til lading", "220 V strømuttak"],
+      "sortOrder": 2
+    },
+    {
+      "externalId": "neoplan-citiliner",
+      "name": "Neoplan Citiliner",
+      "seats": 53,
+      "priceCategory": "Stor buss",
+      "description": "Romslig turbuss for store grupper, med høy komfort- og sikkerhetsstandard.",
+      "images": ["https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80"],
+      "amenities": ["Justerbare seter", "Toalett", "Kaffemaskin", "Kjøleskap", "DVD og TV-skjerm", "Lademuligheter"],
+      "sortOrder": 3
+    },
+    {
+      "externalId": "neoplan-skyliner-80",
+      "name": "Neoplan Skyliner VIP",
+      "seats": 80,
+      "priceCategory": "Dobbeldekker VIP",
+      "description": "Dobbeldekker med VIP-standard, perfekt for store grupper på lengre turer med høye komfortkrav.",
+      "images": ["https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=600&q=80"],
+      "amenities": ["Dobbeldekker", "Justerbare seter", "Toalett", "Kaffemaskin", "Kjøleskap", "DVD og TV-skjerm", "USB til lading"],
+      "sortOrder": 4
+    },
+    {
+      "externalId": "neoplan-skyliner-81",
+      "name": "Neoplan Skyliner VIP",
+      "seats": 81,
+      "priceCategory": "Dobbeldekker VIP",
+      "description": "Dobbeldekker med VIP-standard, vår største buss for store grupper på lengre turer med høye komfortkrav.",
+      "images": ["https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=600&q=80"],
+      "amenities": ["Dobbeldekker", "Justerbare seter", "Toalett", "Kaffemaskin", "Kjøleskap", "DVD og TV-skjerm", "USB til lading"],
+      "sortOrder": 5
+    }
+  ],
+  "content": {
+    "heroImageUrl": "https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=1600&q=80",
+    "heroTitle": "En flott og minneverdig reise",
+    "heroSubtitle": "Pålitelig persontransport på Sørlandet",
+    "heroCta": "Planlegg reisen",
+    "badge1": "5 turbusser i flåten",
+    "badge2": "Erfarne sjåfører",
+    "badge3": "Punktlig drift",
+    "badge4": "Internasjonalt",
+    "footerAbout": "Haga Turbusser er Kristiansands pålitelige partner for bussreiser på Sørlandet.",
+    "recruitTitle": "Bli sjåfør hos oss",
+    "recruitText": "Vi ser alltid etter dyktige og engasjerte sjåfører.",
+    "priceDisclaimer": "Prisen forutsetter at turen starter, slutter eller er innom Kristiansand-området med ca. 30 km radius. Tomkjøring utover 30 km radius beregnes 20 kr/km (per vei). Nattillegg mellom kl 21:00–06:00 beregnes 40% ekstra av timeprisen.",
+    "omOssHeroImageUrl": "https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=1600&q=80",
+    "omOssIntroQuote": "Et turbusselskap i Kristiansand som satser på komfortable og miljøvennlige busser og et høyt sikkerhetsnivå.",
+    "omOssCol1Title": "Om oss",
+    "omOssCol1Text": "Haga Turbusser er et turbusselskap i Kristiansand, med et bredt utvalg moderne turbusser fra 20 til 81 seter — perfekt for både små og store grupper.\n\nVåre busser er fullt utrustet for komfortable reiser, med justerbare seter og god benplass. Flere av bussene har WiFi, toalett, kaffemaskin og TV-skjermer med USB/HDMI.\n\nVi har erfarne sjåfører som gjør sitt ytterste for å bringe deg frem trygt og komfortabelt. Vi tar på oss alle typer oppdrag, både i innland og utland.",
+    "omOssCol2Title": "Våre verdier",
+    "omOssCol2Text": "Vi jobber alltid for å finne den beste løsningen for kunden.\n\nVi setter sikkerhet i fokus, med å holde utstyr i topp stand og vi følger nøye kjøre- og hviletidsbestemmelser.\n\nVi har bare kjøretøy med utslippskrav Euro 5 og Euro 6. Sjåførene har vært gjennom miljøkjøringskurs for minst mulig utslipp.",
+    "omOssCol3Title": "Service",
+    "omOssCol3Text": "Vi vil alltid gjøre vårt ytterste for at du som passasjer skal føle deg vel tatt vare på.\n\nVåre sjåfører er der for deg og gjør sitt ytterste for å gi det lille ekstra, slik at du får den servicen du forventer.\n\nVårt mål er at du sitter igjen med en flott og minneverdig opplevelse med oss i Haga Turbusser.",
+    "servicesTitle": "Bussreiser for alle typer oppdrag",
+    "servicesSubtitle": "Fra dagsturer på Sørlandet til charterturer i Europa — vi sørger for at du og dine reisende kommer trygt og komfortabelt frem.",
+    "servicesBullet1": "Skoleturer og klassereiser",
+    "servicesBullet2": "Bedriftsarrangementer",
+    "servicesBullet3": "Charterturer inn- og utland",
+    "servicesBullet4": "Konserter og arrangementer",
+    "servicesImage1": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80",
+    "servicesImage2": "https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=400&q=80",
+    "servicesImage3": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
+    "stat1Value": "20–81",
+    "stat1Label": "Seter i utvalget",
+    "stat2Value": "5",
+    "stat2Label": "Busser i flåten",
+    "stat3Value": "Euro 5–6",
+    "stat3Label": "Miljøstandard",
+    "stat4Value": "100 %",
+    "stat4Label": "Dedikerte sjåfører",
+    "recruitmentEnabled": false,
+    "recruitmentTeaserTitle": "Vi trenger flere sjåfører!",
+    "recruitmentTeaserText": "Vil du kjøre for et selskap der sjåførene faktisk betyr noe? Vi ser alltid etter dyktige og engasjerte sjåfører til faste stillinger og tilkallingsstillinger.",
+    "recruitmentTeaserImageUrl": "https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80",
+    "recruitmentPageTitle": "Søk på stillingen som bussjåfør",
+    "recruitmentDescription": "Vil du kjøre for et selskap der sjåførene faktisk betyr noe?\n\nVi søker dyktige bussjåfører til faste stillinger og tilkallingsstillinger – både storbuss og minibuss.\n\nHos oss er sjåførene selve fundamentet. Vi vet at det er dere som skaper trygghet, opplevelser og kvalitet – hver eneste dag. Derfor tilbyr vi ikke bare konkurransedyktige betingelser, men et arbeidsmiljø der folk ser hverandre, støtter hverandre og trives sammen.\n\n**Hvorfor velge oss?**\n- Lønn med garanti og ryddige vilkår\n- Konkurransedyktig lønn med garantert 1920 timer per år\n- Meget gode forsikringer, inkludert helseforsikring\n- Bedriftshelsetjeneste\n- Vi dekker YSK-kurs\n- Strukturert opplæring ved oppstart\n- Fast buss for faste ansatte\n- Moderne busspark og variert kjøring\n\n**Kvalifikasjoner**\n- Førerkort D1/D/DE\n- Gyldig YSK, sjåførkort og kjøreseddel\n- Erfaring med tunge kjøretøy er en fordel\n- Behersker et skandinavisk språk\n- Grunnleggende digitale ferdigheter\n- Norsk personnummer eller D-nummer",
+    "recruitmentPageImageUrl": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1200&q=80",
+    "termsContent": "1. Parter og gyldighet\nDisse vilkårene gjelder mellom Haga Turbusser, heretter kalt «Haga Turbusser», og kunden som bestiller transporttjenester. Ved å sende en bestilling aksepterer kunden disse vilkårene i sin helhet.\n\n2. Bestilling og bekreftelse\nEn bestilling er ikke bindende før Haga Turbusser har sendt en skriftlig ordrebekreftelse til kunden. Prisestimater fra reiseplanleggeren er veiledende og endelig pris fastsettes i ordrebekreftelsen.\n\n3. Pris og betaling\nAlle priser er oppgitt eksklusive MVA (12 %) med mindre annet er spesifisert. Faktura sendes etter gjennomført oppdrag med 14 dagers betalingsfrist med mindre annet er avtalt. Ved forsinket betaling påløper lovpålagt forsinkelsesrente.\n\n4. Avbestilling\nAvbestilling mer enn 7 dager før avreise: gebyrfritt.\nAvbestilling 2–7 dager før avreise: 50 % av avtalt pris.\nAvbestilling mindre enn 48 timer før avreise: 100 % av avtalt pris.\nAvbestilling skal alltid skje skriftlig til post@hagakrs.no.\n\n5. Kundens plikter\nKunden er ansvarlig for at passasjerene overholder gjeldende ferdsels- og ordensregler i bussen. Skader påført kjøretøyet av passasjerene faktureres kunden. Røyking og inntak av alkohol er ikke tillatt uten skriftlig forhåndsavtale.\n\n6. Haga Turbussers plikter\nHaga Turbusser forplikter seg til å stille med godkjent kjøretøy og sjåfør til avtalt tid og sted. Ved forsinkelser eller avvik varsles kunden så raskt som mulig. Haga Turbusser er ikke ansvarlig for forsinkelser som skyldes force majeure, trafikkforhold eller andre forhold utenfor vår kontroll.\n\n7. Forsikring\nAlle kjøretøy er forsikret i henhold til norsk lov. Forsikringen dekker personskader og ansvar overfor tredjeparter. Passasjerenes personlige eiendeler er ikke dekket av Haga Turbussers forsikring.\n\n8. Personvern\nPersonopplysninger behandles i henhold til vår personvernerklæring og GDPR. Opplysninger brukes utelukkende for å gjennomføre og administrere bestillingen.\n\n9. Tvister\nEventuelle tvister søkes løst i minnelighet. Dersom partene ikke kommer til enighet, avgjøres tvisten av norske domstoler med Kristiansand tingrett som verneting.\n\n10. Kontakt\nHaga Turbusser\nE-post: post@hagakrs.no\nTelefon: 930 69 411",
+    "privacyContent": "1. Behandlingsansvarlig\nHaga Turbusser, Mjåvannsvegen 74, 4628 Kristiansand, er behandlingsansvarlig for personopplysninger som samles inn via denne nettsiden.\n\nKontakt: post@hagakrs.no · Tlf: 930 69 411\n\n2. Hvilke opplysninger samler vi inn?\nNår du bruker vår bookingskjema eller kontaktskjema samler vi inn:\n- Navn (for- og etternavn)\n- E-postadresse\n- Mobilnummer\n- Bedriftsnavn og organisasjonsnummer (kun ved firmabooking)\n- Reiseinformasjon (adresser, dato, antall passasjerer)\n- Meldinger du sender oss\n\nVi samler ikke inn sensitive personopplysninger med mindre du frivillig oppgir dem i en melding.\n\n3. Formål og rettslig grunnlag\nVi behandler opplysningene dine for å:\n- Behandle og besvare din bestillingsforespørsel (kontraktsoppfyllelse – GDPR art. 6 b)\n- Besvare henvendelser via kontaktskjemaet (berettiget interesse – GDPR art. 6 f)\n- Sende deg nødvendig kommunikasjon om din bestilling (kontraktsoppfyllelse)\n- Overholde regnskapsmessige forpliktelser (rettslig forpliktelse – GDPR art. 6 c)\n\nVi bruker ikke opplysningene dine til automatisert beslutningstaking eller profilering.\n\n4. Deling med tredjeparter\nVi deler ikke personopplysningene dine med tredjeparter for markedsføring. Opplysningene kan deles med:\n- E-postleverandør (for utsending av bekreftelser)\n- Regnskapssystem (ved fakturabehandling)\n- Offentlige myndigheter når dette er lovpålagt\n\nAlle databehandlere er underlagt databehandleravtale og behandler opplysningene kun på våre vegne.\n\n5. Lagringstid\nVi lagrer personopplysningene dine så lenge det er nødvendig for de formålene de ble samlet inn for:\n- Bestillingsdata: 5 år (regnskapsmessige forpliktelser)\n- Kontakthenvendelser: 2 år etter siste kontakt\n- Når du ber om sletting, vil vi slette opplysningene innen 30 dager\n\n6. Informasjonskapsler (cookies)\nVår nettside bruker kun nødvendige informasjonskapsler for grunnleggende funksjonalitet. Vi bruker ikke sporingsinfokapsler eller tredjeparts analyseverktøy uten ditt samtykke. Du kan administrere informasjonskapsler i nettleserinnstillingene dine.\n\n7. Dine rettigheter\nI henhold til GDPR har du rett til å:\n- Kreve innsyn i personopplysningene vi har lagret om deg\n- Kreve retting av feilaktige opplysninger\n- Kreve sletting av dine opplysninger («retten til å bli glemt»)\n- Kreve begrensning av behandlingen\n- Protestere mot behandling basert på berettiget interesse\n- Dataportabilitet – motta opplysningene i et maskinlesbart format\n\nFor å utøve dine rettigheter, kontakt oss på post@hagakrs.no. Vi svarer innen 30 dager.\n\n8. Klagerett\nDersom du mener vi behandler personopplysningene dine i strid med GDPR, har du rett til å klage til Datatilsynet:\nDatatilsynet, Postboks 458 Sentrum, 0105 Oslo\nwww.datatilsynet.no · postkasse@datatilsynet.no\n\n9. Endringer i personvernerklæringen\nVi kan oppdatere denne erklæringen. Vesentlige endringer vil varsles på nettsiden. Siste oppdatering: juli 2026.\n\n10. Kontakt\nHaga Turbusser\nE-post: post@hagakrs.no\nTelefon: 930 69 411\nAdresse: Mjåvannsvegen 74, 4628 Kristiansand",
+    "bankAccountNumber": ""
+  },
+  "deployment": {
+    "renderServiceName": "haga-turbusser-api",
+    "cloudflareWorkerName": "haga-turbusser",
+    "corsOrigins": ["https://haga-turbusser.s362052.workers.dev"],
+    "jwtIssuer": "haga-api",
+    "jwtAudience": "haga-web",
+    "emailFromAddress": "post@hagakrs.no",
+    "emailNotifyTo": "post@hagakrs.no"
+  }
+}
