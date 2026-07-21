@@ -1,5 +1,5 @@
-# Multi-service Blueprint: one service + database per customer, each pinned to
-# its own deploy/<slug> branch so a Render redeploy only ever affects that one
+# Multi-service Blueprint: one service per customer, each pinned to its own
+# deploy/<slug> branch so a Render redeploy only ever affects that one
 # customer. See scripts/stamp-deploy.mjs's comment header for why this file is
 # no longer stamped per-deploy — it's now a static, permanent definition.
 #
@@ -12,15 +12,17 @@
 # untouched. Everything below is new infrastructure for the Bus_Solution
 # template; cutting a customer over to it for real is a separate, deliberate
 # future decision, not a side effect of this Blueprint.
-databases:
-  - name: kjosavik-staging-db
-    plan: free
-  - name: nidaros-staging-db
-    plan: free
-  - name: team-tour-staging-db
-    plan: free
-  - name: haga-staging-db
-    plan: free
+#
+# No `databases:` block here — Render's free plan only allows one managed
+# Postgres instance per account. Instead, each service's DefaultConnection is
+# `sync: false` (manual entry): all four point at the same Bloomstack Postgres
+# SERVER, but each gets its own separate logical database name
+# (kjosavik_staging / nidaros_staging / teamtour_staging / haga_staging) —
+# same host/credentials, different `Database=` in the connection string. This
+# is NOT the same database — sharing one literal database across customers
+# would let DbSeeder's "seed once" guard leak one customer's data into all
+# four. Run `CREATE DATABASE <name>;` once per customer against Bloomstack's
+# server before pasting each connection string into Render.
 
 services:
   - name: kjosavik-reiser-api-staging
@@ -37,9 +39,7 @@ services:
       - key: Customer__Slug
         value: kjosavik
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: kjosavik-staging-db
-          property: connectionString
+        sync: false
       - key: Cors__AllowedOrigins__0
         value: https://kjosavik-reiser-staging.s362052.workers.dev
       - key: Jwt__Key
@@ -83,9 +83,7 @@ services:
       - key: Customer__Slug
         value: nidaros
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: nidaros-staging-db
-          property: connectionString
+        sync: false
       - key: Cors__AllowedOrigins__0
         value: https://nidaros-turbuss-staging.s362052.workers.dev
       - key: Jwt__Key
@@ -129,9 +127,7 @@ services:
       - key: Customer__Slug
         value: teamtour
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: team-tour-staging-db
-          property: connectionString
+        sync: false
       - key: Cors__AllowedOrigins__0
         value: https://team-tour-staging.s362052.workers.dev
       - key: Jwt__Key
@@ -175,9 +171,7 @@ services:
       - key: Customer__Slug
         value: haga
       - key: ConnectionStrings__DefaultConnection
-        fromDatabase:
-          name: haga-staging-db
-          property: connectionString
+        sync: false
       - key: Cors__AllowedOrigins__0
         value: https://haga-turbusser-staging.s362052.workers.dev
       - key: Jwt__Key
