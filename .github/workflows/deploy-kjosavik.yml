@@ -39,3 +39,8 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # wrangler-action's own default (3.90.0) only auto-discovers wrangler.toml,
+          # not wrangler.json — pin to v4, which auto-discovers .json correctly
+          # (confirmed locally; passing --config explicitly instead would also work
+          # but pinning avoids depending on an old version's discovery quirks).
+          wranglerVersion: '4'
