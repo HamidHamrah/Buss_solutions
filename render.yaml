@@ -1,0 +1,45 @@
+services:
+  - name: kjosavik-reiser-api
+    type: web
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      - key: Cors__AllowedOrigins__1
+        value: https://kjosavikreiser.no
+      - key: Cors__AllowedOrigins__2
+        value: https://www.kjosavikreiser.no
+      - key: Jwt__Key
+        generateValue: true
+      - key: Jwt__Issuer
+        value: kjosavik-api
+      - key: Jwt__Audience
+        value: kjosavik-web
+      - key: Email__Host
+        sync: false
+      - key: Email__Port
+        sync: false
+      - key: Email__Username
+        sync: false
+      - key: Email__Password
+        sync: false
+      - key: Email__FromAddress
+        value: post@kjosavikreiser.no
+      - key: Email__FromName
+        value: Kjosavik Reiser AS
+      - key: Email__NotifyTo
+        value: post@kjosavikreiser.no
+      - key: Twilio__AccountSid
+        sync: false
+      - key: Twilio__AuthToken
+        sync: false
+      - key: Twilio__FromNumber
+        sync: false
