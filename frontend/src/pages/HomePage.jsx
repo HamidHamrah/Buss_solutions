@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import { ArrowRight, Star, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
 import { api } from '../services/api'
 import { useSeo } from '../hooks/useSeo'
-import JsonLd, { ORG_SCHEMA } from '../components/JsonLd'
+import JsonLd from '../components/JsonLd'
+import { useConfig } from '../contexts/ConfigContext'
 
 // ── Google G svg ──────────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -152,22 +153,40 @@ export default function HomePage() {
     description: 'Kjosavik Reiser AS tilbyr komfortable bussreiser fra Jæren siden 2023. Flyplassturer, skoleturer, firmaturer og charterturer. Få et uforpliktende pristilbud i dag.',
   })
   const navigate = useNavigate()
+  const { config: siteConfig } = useConfig()
   const [partners, setPartners] = useState([])
-  const [siteConfig, setSiteConfig] = useState(null)
   const [testimonials, setTestimonials] = useState([])
 
   useEffect(() => {
     api.getPartners(true).then(setPartners).catch(() => {})
-    api.getConfig().then(setSiteConfig).catch(() => {})
     api.getTestimonials(true).then(setTestimonials).catch(() => {})
   }, [])
 
   const c = siteConfig?.content ?? {}
   const heroImg = c.heroImageUrl || 'https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=1600&q=80'
 
+  const orgSchema = siteConfig && {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    '@id': c.siteDomain,
+    name: c.companyName,
+    url: c.siteDomain,
+    logo: c.siteDomain + c.logoPath,
+    image: c.siteDomain + c.ogImagePath,
+    telephone: c.phone ? `+47${c.phone.replace(/\s+/g, '')}` : undefined,
+    email: c.email,
+    foundingDate: c.foundingYear,
+    address: { '@type': 'PostalAddress', streetAddress: c.address, addressCountry: 'NO' },
+    geo: { '@type': 'GeoCoordinates', latitude: c.geoLat, longitude: c.geoLng },
+    openingHoursSpecification: [
+      { '@type': 'OpeningHoursSpecification', dayOfWeek: c.openingHoursDays, opens: c.openingHoursOpen, closes: c.openingHoursClose },
+    ],
+    sameAs: [siteConfig.socialFacebook, siteConfig.socialInstagram, siteConfig.socialLinkedin].filter(Boolean),
+  }
+
   return (
     <div>
-      <JsonLd data={ORG_SCHEMA} />
+      {orgSchema && <JsonLd data={orgSchema} />}
 
 
       {/* ── Services — split layout ── */}

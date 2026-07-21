@@ -12,14 +12,16 @@ public class EmailSettings
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
     public string FromAddress { get; set; } = "";
-    public string FromName { get; set; } = "Kjosavik Reiser AS";
+    public string FromName { get; set; } = "";
     public string NotifyTo { get; set; } = "";
 }
+
+public record CompanyInfo(string Name, string Phone, string Email, string Domain);
 
 public class EmailService(EmailSettings settings, AppDbContext db, ILogger<EmailService> logger)
 {
     // ── Shared layout ──────────────────────────────────────────────────────────
-    private static string Wrap(string bodyHtml, string previewText = "")
+    private static string Wrap(string bodyHtml, CompanyInfo company, string previewText = "")
     {
         var preview = string.IsNullOrWhiteSpace(previewText) ? ""
             : $"<div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all\">{previewText}</div>";
@@ -27,7 +29,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             "<html lang=\"nb\"><head>" +
             "<meta charset=\"UTF-8\"/>" +
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>" +
-            "<title>Kjosavik Reiser AS</title>" +
+            $"<title>{company.Name}</title>" +
             "</head>" +
             "<body style=\"margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%\">" +
             preview +
@@ -35,20 +37,21 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             "<tr><td align=\"center\">" +
             "<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08)\">" +
             "<tr><td style=\"background-color:#1a3a5c;padding:28px 40px;text-align:center\">" +
-            "<p style=\"margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:1px\">KJOSAVIK REISER AS</p>" +
-            "<p style=\"margin:4px 0 0;font-size:12px;color:#8ab4d4;letter-spacing:2px;text-transform:uppercase\">Persontransport siden 2023</p>" +
+            $"<p style=\"margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:1px\">{company.Name.ToUpperInvariant()}</p>" +
             "</td></tr>" +
             "<tr><td style=\"padding:36px 40px 28px\">" +
             bodyHtml +
             "</td></tr>" +
             "<tr><td style=\"background-color:#f8f9fb;border-top:1px solid #e8eaed;padding:20px 40px;text-align:center\">" +
             "<p style=\"margin:0;font-size:12px;color:#6b7280\">" +
-            "<strong>Kjosavik Reiser AS</strong> &nbsp;|&nbsp; Tlf: 45 15 22 22 &nbsp;|&nbsp;" +
-            "<a href=\"mailto:post@kjosavikreiser.no\" style=\"color:#1a3a5c;text-decoration:none\">post@kjosavikreiser.no</a>" +
+            $"<strong>{company.Name}</strong> &nbsp;|&nbsp; Tlf: {company.Phone} &nbsp;|&nbsp;" +
+            $"<a href=\"mailto:{company.Email}\" style=\"color:#1a3a5c;text-decoration:none\">{company.Email}</a>" +
             "</p>" +
+            (string.IsNullOrWhiteSpace(company.Domain) ? "" :
             "<p style=\"margin:6px 0 0;font-size:11px;color:#9ca3af\">" +
-            "<a href=\"https://www.kjosavikreiser.no\" style=\"color:#9ca3af;text-decoration:none\">www.kjosavikreiser.no</a>" +
-            "</p></td></tr>" +
+            $"<a href=\"{company.Domain}\" style=\"color:#9ca3af;text-decoration:none\">{company.Domain}</a>" +
+            "</p>") +
+            "</td></tr>" +
             "</table>" +
             "</td></tr></table>" +
             "</body></html>";
@@ -87,6 +90,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
         List<string>? stops = null, bool needsTrailer = false, bool needsWheelchair = false,
         List<string>? selectedExtras = null, int passengers = 0, decimal vatPercent = 12)
     {
+        var company = await GetCompanyInfoAsync();
         var vatAmount = Math.Round(total * vatPercent / (100 + vatPercent), 2);
         var exVat = total - vatAmount;
 
@@ -139,10 +143,10 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             """;
 
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Kjosavik Reiser AS", settings.FromAddress));
+        message.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
         message.To.Add(new MailboxAddress(toName, toEmail));
         message.Subject = $"Bestillingsforespørsel mottatt – {reference}";
-        message.Body = new TextPart("html") { Text = Wrap(body, $"Referanse {reference} er registrert.") };
+        message.Body = new TextPart("html") { Text = Wrap(body, company, $"Referanse {reference} er registrert.") };
         await SendAsync(message);
     }
 
@@ -151,6 +155,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
         string reference, string contactName, string contactEmail, string contactPhone,
         string fromAddress, string toAddress, DateTime departureDate, string busName, decimal total)
     {
+        var company = await GetCompanyInfoAsync();
         var rows = new (string, string)[]
         {
             ("Referanse", reference),
@@ -171,16 +176,17 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             """;
 
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Kjosavik Reiser AS", settings.FromAddress));
+        message.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
         message.To.Add(MailboxAddress.Parse(string.IsNullOrWhiteSpace(settings.NotifyTo) ? settings.FromAddress : settings.NotifyTo));
         message.Subject = $"Ny bestilling – {reference}";
-        message.Body = new TextPart("html") { Text = Wrap(body) };
+        message.Body = new TextPart("html") { Text = Wrap(body, company) };
         await SendAsync(message);
     }
 
     // ── Customer: contact form receipt ─────────────────────────────────────────
     public async Task SendContactConfirmationAsync(string toEmail, string toName, string subject)
     {
+        var company = await GetCompanyInfoAsync();
         var body = $"""
             {H2($"Takk for din henvendelse, {toName}!")}
             {P("Vi har mottatt meldingen din og vil svare deg så snart som mulig, normalt innen 2 arbeidstimer.")}
@@ -188,16 +194,17 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             """;
 
         var msg = new MimeMessage();
-        msg.From.Add(new MailboxAddress("Kjosavik Reiser AS", settings.FromAddress));
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
         msg.To.Add(new MailboxAddress(toName, toEmail));
         msg.Subject = $"Vi har mottatt din melding – {subject}";
-        msg.Body = new TextPart("html") { Text = Wrap(body, "Vi har mottatt din henvendelse.") };
+        msg.Body = new TextPart("html") { Text = Wrap(body, company, "Vi har mottatt din henvendelse.") };
         await SendAsync(msg);
     }
 
     // ── Internal: contact form notification ───────────────────────────────────
     public async Task SendContactNotificationAsync(string name, string email, string phone, string subject, string messageText)
     {
+        var company = await GetCompanyInfoAsync();
         var rows = new (string, string)[]
         {
             ("Navn", name),
@@ -216,16 +223,17 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             """;
 
         var msg = new MimeMessage();
-        msg.From.Add(new MailboxAddress("Kjosavik Reiser AS", settings.FromAddress));
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
         msg.To.Add(MailboxAddress.Parse(string.IsNullOrWhiteSpace(settings.NotifyTo) ? settings.FromAddress : settings.NotifyTo));
         msg.Subject = $"Ny kontaktmelding: {subject}";
-        msg.Body = new TextPart("html") { Text = Wrap(body) };
+        msg.Body = new TextPart("html") { Text = Wrap(body, company) };
         await SendAsync(msg);
     }
 
     // ── Customer: contact reply ────────────────────────────────────────────────
     public async Task SendContactReplyAsync(string toEmail, string toName, string subject, string replyText)
     {
+        var company = await GetCompanyInfoAsync();
         var body = $"""
             {P($"Hei {toName},")}
             <div style="background-color:#f8f9fb;border-left:3px solid #1a3a5c;padding:14px 16px;border-radius:0 4px 4px 0;font-size:14px;color:#374151;line-height:1.6;margin:0 0 16px">
@@ -234,14 +242,24 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             """;
 
         var msg = new MimeMessage();
-        msg.From.Add(new MailboxAddress("Kjosavik Reiser AS", settings.FromAddress));
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
         msg.To.Add(new MailboxAddress(toName, toEmail));
         msg.Subject = $"Re: {subject}";
-        msg.Body = new TextPart("html") { Text = Wrap(body) };
+        msg.Body = new TextPart("html") { Text = Wrap(body, company) };
         await SendAsync(msg);
     }
 
     // ── Infrastructure ─────────────────────────────────────────────────────────
+    private async Task<CompanyInfo> GetCompanyInfoAsync()
+    {
+        var cfg = await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync();
+        return new CompanyInfo(
+            cfg?.CompanyName ?? settings.FromName,
+            cfg?.Phone ?? "",
+            cfg?.Email ?? settings.FromAddress,
+            cfg?.SiteDomain ?? "");
+    }
+
     private async Task<EmailSettings> ResolveSettingsAsync()
     {
         if (!string.IsNullOrWhiteSpace(settings.Host)) return settings;
@@ -256,7 +274,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             Username = cfg.SmtpUsername,
             Password = cfg.SmtpPassword,
             FromAddress = cfg.SmtpFromAddress,
-            FromName = "Kjosavik Reiser AS",
+            FromName = cfg.CompanyName,
             NotifyTo = cfg.SmtpNotifyTo,
         };
     }

@@ -33,6 +33,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 v => JsonSerializer.Serialize(v, jsonOptions),
                 v => JsonSerializer.Deserialize<List<CustomPricingVariable>>(v, jsonOptions) ?? new List<CustomPricingVariable>());
 
+        modelBuilder.Entity<SiteConfig>()
+            .Property(e => e.OpeningHoursDays)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>());
+
+        modelBuilder.Entity<SiteConfig>()
+            .Property(e => e.FooterCertifications)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>());
+
         modelBuilder.Entity<Bus>()
             .Property(e => e.Images)
             .HasConversion(

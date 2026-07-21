@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Menu, X, Phone, LogIn } from 'lucide-react'
-import { getContent } from '../services/config'
+import { useConfig } from '../contexts/ConfigContext'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { phone } = getContent()
-  const telHref = `tel:+47${phone.replace(/\s+/g, '')}`
+  const { config } = useConfig()
+  const { phone, email, companyName, logoPath } = config?.content ?? {}
+  const telHref = `tel:+47${(phone || '').replace(/\s+/g, '')}`
 
   const links = [
     { label: 'Leie buss', href: '#services' },
@@ -33,7 +34,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-24">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <img src="/logo.png" alt="Kjosavik Reiser" className="h-14 w-auto object-contain" />
+            <img src={logoPath} alt={companyName} className="h-14 w-auto object-contain" />
           </Link>
 
           {/* Desktop nav */}
@@ -92,8 +93,8 @@ export default function Navbar() {
           <a href={telHref} className="flex items-center gap-2 text-brand-gray text-sm">
             <Phone size={15} /> {phone}
           </a>
-          <a href="mailto:post@kjosavikreiser.no" className="block text-brand-gray text-sm">
-            post@kjosavikreiser.no
+          <a href={`mailto:${email}`} className="block text-brand-gray text-sm">
+            {email}
           </a>
           <button
             onClick={() => { setOpen(false); navigate('/logg-inn') }}

@@ -3,12 +3,14 @@ services:
     type: web
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerContext: .
     plan: free
     healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      - key: Customer__Slug
+        value: kjosavik
       - key: ConnectionStrings__DefaultConnection
         sync: false
       - key: Cors__AllowedOrigins__0

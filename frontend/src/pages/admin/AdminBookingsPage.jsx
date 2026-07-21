@@ -377,7 +377,7 @@ function TripEditor({ tripId, booking, buses, drivers, onDeleted, onUpdated }) {
   )
 }
 
-function printQuote(booking) {
+function printQuote(booking, company) {
   const date = (d) => d ? new Date(d).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' }) : '–'
   const kr = (n) => n != null ? Number(n).toLocaleString('nb-NO') + ' kr' : '–'
   const html = `<!DOCTYPE html>
@@ -422,9 +422,9 @@ function printQuote(booking) {
   </div>
   <div class="header">
     <div>
-      <div class="company">Kjosavik Reiser AS</div>
-      <div class="company-sub">Fosseikeveien 3, Fosseikeland</div>
-      <div class="company-sub">post@kjosavikreiser.no · 95 45 38 07</div>
+      <div class="company">${company.name}</div>
+      <div class="company-sub">${company.address}</div>
+      <div class="company-sub">${company.email} · ${company.phone}</div>
     </div>
     <div class="doc-title">
       <h2>Pristilbud</h2>
@@ -466,13 +466,13 @@ function printQuote(booking) {
       ${booking.priceAdjustment ? `<tr><td class="label">${booking.priceAdjustmentNote || 'Prisjustering'}</td><td class="amount">${booking.priceAdjustment > 0 ? '+' : ''}${kr(booking.priceAdjustment)}</td></tr>` : ''}
       <tr><td class="label"><strong>Total inkl. MVA</strong></td><td class="amount"><strong>${kr(booking.estimatedTotal)}</strong></td></tr>
     </table>
-    <div class="note" style="margin-top:12px">Dette er et prisestimat. Endelig pris fastsettes i ordrebekreftelsen. Prisen inkluderer sjåfør, drivstoff og bompenger. Avbestillingsbetingelser følger av våre vilkår på kjosavikreiser.no/vilkar.</div>
+    <div class="note" style="margin-top:12px">Dette er et prisestimat. Endelig pris fastsettes i ordrebekreftelsen. Prisen inkluderer sjåfør, drivstoff og bompenger. Avbestillingsbetingelser følger av våre vilkår på ${company.domainHost}/vilkar.</div>
   </div>
 
   ${booking.message ? `<div class="section"><div class="section-title">Kundens merknad</div><div class="note">${booking.message}</div></div>` : ''}
 
   <div class="footer">
-    <span>Kjosavik Reiser AS · post@kjosavikreiser.no · 95 45 38 07 · kjosavikreiser.no</span>
+    <span>${company.name} · ${company.email} · ${company.phone} · ${company.domainHost}</span>
     <span>${booking.reference}</span>
   </div>
 </body>
@@ -483,7 +483,7 @@ function printQuote(booking) {
   window.open(url, '_blank')
 }
 
-function printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber = '') {
+function printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber = '', company) {
   const date = (d) => d ? new Date(d).toLocaleDateString('nb-NO', { day: 'numeric', month: 'long', year: 'numeric' }) : '–'
   const kr = (n) => n != null ? Number(n).toLocaleString('nb-NO') + ' kr' : '–'
   const dueDate = new Date(invoiceDate)
@@ -540,10 +540,10 @@ function printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber = '
 
   <div class="header">
     <div>
-      <div class="company">Kjosavik Reiser AS</div>
-      <div class="company-sub">Fosseikeveien 3, Fosseikeland</div>
-      <div class="company-sub">Org.nr. 997 036 115 · MVA-registrert</div>
-      <div class="company-sub">post@kjosavikreiser.no · 95 45 38 07</div>
+      <div class="company">${company.name}</div>
+      <div class="company-sub">${company.address}</div>
+      ${company.orgNr ? `<div class="company-sub">Org.nr. ${company.orgNr} · MVA-registrert</div>` : ''}
+      <div class="company-sub">${company.email} · ${company.phone}</div>
     </div>
     <div class="doc-title">
       <h2>FAKTURA</h2>
@@ -619,12 +619,12 @@ function printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber = '
 
   <p class="note">
     Betalingsbetingelser: 14 dager netto. Ved forsinket betaling påløper lovpålagt forsinkelsesrente.
-    Fakturert av Kjosavik Reiser AS.
-    Spørsmål om denne fakturaen? Kontakt post@kjosavikreiser.no eller 95 45 38 07.
+    Fakturert av ${company.name}.
+    Spørsmål om denne fakturaen? Kontakt ${company.email} eller ${company.phone}.
   </p>
 
   <div class="footer">
-    <span>Kjosavik Reiser AS · Fosseikeveien 3, Fosseikeland · post@kjosavikreiser.no</span>
+    <span>${company.name} · ${company.address} · ${company.email}</span>
     <span>Faktura ${invoiceNumber}</span>
   </div>
 </body>
@@ -643,7 +643,7 @@ const STATUS_COLORS = {
   3: 'bg-blue-100 text-blue-700',
 }
 
-function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccountNumber = '', selectable = false, selected = false, onToggleSelect, defaultOpen = false, autoExpandTripId }) {
+function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccountNumber = '', company = {}, selectable = false, selected = false, onToggleSelect, defaultOpen = false, autoExpandTripId }) {
   const [open, setOpen] = useState(defaultOpen)
   const [updating, setUpdating] = useState(false)
   const [notes, setNotes] = useState(booking.adminNotes || '')
@@ -668,7 +668,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       const res = await api.generateInvoice(booking.id)
       setInvoiceNumber(res.invoiceNumber)
       setInvoiceDate(res.invoiceDate)
-      printInvoice(booking, res.invoiceNumber, res.invoiceDate, bankAccountNumber)
+      printInvoice(booking, res.invoiceNumber, res.invoiceDate, bankAccountNumber, company)
     } catch {}
     setGeneratingInvoice(false)
   }
@@ -878,11 +878,11 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
           </div>
 
           <div className="flex gap-3 flex-wrap">
-            <button onClick={() => printQuote(booking)}
+            <button onClick={() => printQuote(booking, company)}
               className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
               <Printer size={15} /> Pristilbud
             </button>
-            <button onClick={invoiceNumber ? () => printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber) : handleGenerateInvoice}
+            <button onClick={invoiceNumber ? () => printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber, company) : handleGenerateInvoice}
               disabled={generatingInvoice}
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
               <Printer size={15} />
@@ -1010,7 +1010,7 @@ function BulkActionBar({ selected, bookings, onBulkStatus, onClear }) {
 }
 
 // ── Innboks tab ───────────────────────────────────────────────────────────────
-function InboxTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber }) {
+function InboxTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber, company }) {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(new Set())
   const newBookings = bookings.filter(b => b.status === 0)
@@ -1065,7 +1065,7 @@ function InboxTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber })
         <div className="text-center py-10 text-gray-400 text-sm">Ingen treff på «{search}»</div>
       ) : (
         filtered.map(b => (
-          <BookingCard key={b.id} booking={b} onStatusChange={onStatusChange} bankAccountNumber={bankAccountNumber}
+          <BookingCard key={b.id} booking={b} onStatusChange={onStatusChange} bankAccountNumber={bankAccountNumber} company={company}
             selectable selected={selected.has(b.id)} onToggleSelect={toggleSelect} />
         ))
       )}
@@ -1074,7 +1074,7 @@ function InboxTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber })
 }
 
 // ── Arkiv tab ─────────────────────────────────────────────────────────────────
-function ArchiveTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber }) {
+function ArchiveTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber, company }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all') // all | confirmed | cancelled
   const [dateFrom, setDateFrom] = useState('')
@@ -1188,7 +1188,7 @@ function ArchiveTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber 
       ) : (
         <div className="space-y-3">
           {filtered.map(b => (
-            <BookingCard key={b.id} booking={b} onStatusChange={onStatusChange} showMoveToNew bankAccountNumber={bankAccountNumber}
+            <BookingCard key={b.id} booking={b} onStatusChange={onStatusChange} showMoveToNew bankAccountNumber={bankAccountNumber} company={company}
               selectable selected={selected.has(b.id)} onToggleSelect={toggleSelect} />
           ))}
         </div>
@@ -1201,6 +1201,14 @@ function ArchiveTab({ bookings, onStatusChange, onBulkStatus, bankAccountNumber 
 export default function AdminBookingsPage() {
   const { config } = useConfig()
   const bankAccountNumber = config?.bankAccountNumber || config?.content?.bankAccountNumber || 'Ikke konfigurert'
+  const company = {
+    name: config?.content?.companyName || '',
+    address: config?.content?.address || '',
+    orgNr: config?.content?.orgNr || '',
+    email: config?.content?.email || '',
+    phone: config?.content?.phone || '',
+    domainHost: (config?.content?.siteDomain || '').replace(/^https?:\/\//, ''),
+  }
   const [searchParams, setSearchParams] = useSearchParams()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1407,6 +1415,7 @@ export default function AdminBookingsPage() {
             onStatusChange={handleStatusChange}
             showMoveToNew
             bankAccountNumber={bankAccountNumber}
+            company={company}
             defaultOpen
             autoExpandTripId={jumpTarget.autoExpandTripId} />
         </div>
@@ -1425,7 +1434,8 @@ export default function AdminBookingsPage() {
           <BookingCard booking={refResult.booking}
             onStatusChange={handleStatusChange}
             showMoveToNew
-            bankAccountNumber={bankAccountNumber} />
+            bankAccountNumber={bankAccountNumber}
+            company={company} />
         </div>
       )}
 
@@ -1463,8 +1473,8 @@ export default function AdminBookingsPage() {
 
       {!loading && !error && (
         tab === 'inbox'
-          ? <InboxTab bookings={bookings} onStatusChange={handleStatusChange} onBulkStatus={handleBulkStatus} bankAccountNumber={bankAccountNumber} />
-          : <ArchiveTab bookings={bookings} onStatusChange={handleStatusChange} onBulkStatus={handleBulkStatus} bankAccountNumber={bankAccountNumber} />
+          ? <InboxTab bookings={bookings} onStatusChange={handleStatusChange} onBulkStatus={handleBulkStatus} bankAccountNumber={bankAccountNumber} company={company} />
+          : <ArchiveTab bookings={bookings} onStatusChange={handleStatusChange} onBulkStatus={handleBulkStatus} bankAccountNumber={bankAccountNumber} company={company} />
       )}
 
       {loadingMore && (

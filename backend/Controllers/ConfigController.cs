@@ -94,9 +94,28 @@ public class ConfigController(AppDbContext db) : ControllerBase
 
         // Pages
         cfg.TermsContent = req.TermsContent;
+        cfg.PrivacyContent = req.PrivacyContent;
 
         // Invoice
         cfg.BankAccountNumber = req.BankAccountNumber;
+
+        // Identity & SEO
+        cfg.CompanyName = req.CompanyName;
+        cfg.BrandNamePrimary = req.BrandNamePrimary;
+        cfg.BrandNameSecondary = req.BrandNameSecondary;
+        cfg.SiteDomain = req.SiteDomain;
+        cfg.LogoPath = req.LogoPath;
+        cfg.FaviconPath = req.FaviconPath;
+        cfg.OgImagePath = req.OgImagePath;
+        cfg.FoundingYear = req.FoundingYear;
+        cfg.GeoLat = req.GeoLat;
+        cfg.GeoLng = req.GeoLng;
+        cfg.OpeningHoursDays = req.OpeningHoursDays ?? [];
+        cfg.OpeningHoursOpen = req.OpeningHoursOpen;
+        cfg.OpeningHoursClose = req.OpeningHoursClose;
+        cfg.OpeningHoursText = req.OpeningHoursText;
+        cfg.EmergencyAvailabilityText = req.EmergencyAvailabilityText;
+        cfg.FooterCertifications = req.FooterCertifications ?? [];
 
         await db.SaveChangesAsync();
         return Ok(ToPublicDto(cfg));
@@ -128,7 +147,7 @@ public class ConfigController(AppDbContext db) : ControllerBase
         var to = string.IsNullOrWhiteSpace(cfg.SmtpNotifyTo) ? cfg.SmtpFromAddress : cfg.SmtpNotifyTo;
         try
         {
-            await emailService.SendContactConfirmationAsync(to, "Admin", "Test e-post fra Kjosavik Reiser");
+            await emailService.SendContactConfirmationAsync(to, "Admin", $"Test e-post fra {cfg.CompanyName}");
             return Ok(new { message = $"Test-e-post sendt til {to}" });
         }
         catch (Exception ex)
@@ -161,6 +180,12 @@ public class ConfigController(AppDbContext db) : ControllerBase
             cfg.ServicesImage1, cfg.ServicesImage2, cfg.ServicesImage3,
             cfg.Stat1Value, cfg.Stat1Label, cfg.Stat2Value, cfg.Stat2Label,
             cfg.Stat3Value, cfg.Stat3Label, cfg.Stat4Value, cfg.Stat4Label,
+            cfg.CompanyName, cfg.BrandNamePrimary, cfg.BrandNameSecondary, cfg.SiteDomain,
+            cfg.LogoPath, cfg.FaviconPath, cfg.OgImagePath, cfg.FoundingYear,
+            cfg.GeoLat, cfg.GeoLng,
+            cfg.OpeningHoursDays, cfg.OpeningHoursOpen, cfg.OpeningHoursClose, cfg.OpeningHoursText,
+            cfg.EmergencyAvailabilityText, cfg.FooterCertifications,
+            cfg.PrivacyContent,
         },
         termsContent = cfg.TermsContent,
         bankAccountNumber = cfg.BankAccountNumber,
@@ -171,6 +196,9 @@ public class ConfigController(AppDbContext db) : ControllerBase
         recruitmentPageTitle = cfg.RecruitmentPageTitle,
         recruitmentDescription = cfg.RecruitmentDescription,
         recruitmentPageImageUrl = cfg.RecruitmentPageImageUrl,
+        socialFacebook = cfg.SocialFacebook,
+        socialInstagram = cfg.SocialInstagram,
+        socialLinkedin = cfg.SocialLinkedin,
     };
 }
 
@@ -208,7 +236,24 @@ public record UpdateConfigRequest(
     string RecruitmentDescription = "",
     string RecruitmentPageImageUrl = "",
     string TermsContent = "",
-    string BankAccountNumber = ""
+    string PrivacyContent = "",
+    string BankAccountNumber = "",
+    string CompanyName = "",
+    string BrandNamePrimary = "",
+    string BrandNameSecondary = "",
+    string SiteDomain = "",
+    string LogoPath = "/logo.png",
+    string FaviconPath = "/favicon.svg",
+    string OgImagePath = "/og-image.jpg",
+    string FoundingYear = "",
+    decimal GeoLat = 0,
+    decimal GeoLng = 0,
+    List<string>? OpeningHoursDays = null,
+    string OpeningHoursOpen = "",
+    string OpeningHoursClose = "",
+    string OpeningHoursText = "",
+    string EmergencyAvailabilityText = "",
+    List<string>? FooterCertifications = null
 );
 
 public record ChangePasswordRequest(string NewPassword);

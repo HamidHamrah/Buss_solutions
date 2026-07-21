@@ -1,5 +1,5 @@
 import { ShieldCheck, Leaf, Users, Star } from 'lucide-react'
-import { getContent } from '../services/config'
+import { useConfig } from '../contexts/ConfigContext'
 import { useSeo } from '../hooks/useSeo'
 
 const values = [
@@ -19,11 +19,13 @@ const DEFAULT_COLS = [
 ]
 
 export default function OmOssPage() {
+  const { config } = useConfig()
+  const content = config?.content ?? {}
+
   useSeo({
     title: 'Om oss',
-    description: 'Kjosavik Reiser AS har drevet pålitelig persontransport fra Jæren siden 2023. Les om hvem vi er, våre verdier og hva som gjør oss til et trygt valg for din neste reise.',
+    description: `${content.companyName} har drevet pålitelig persontransport siden ${content.foundingYear}. Les om hvem vi er, våre verdier og hva som gjør oss til et trygt valg for din neste reise.`,
   })
-  const content = getContent()
   const heroImage = content.omOssHeroImageUrl || DEFAULT_HERO
   const introQuote = content.omOssIntroQuote || DEFAULT_INTRO
   const cols = [
@@ -46,9 +48,9 @@ export default function OmOssPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
         <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-8 pb-16 w-full">
-          <p className="text-brand-blue text-xs font-bold tracking-[0.2em] uppercase mb-3">Kjosavik Reiser AS</p>
+          <p className="text-brand-blue text-xs font-bold tracking-[0.2em] uppercase mb-3">{content.companyName}</p>
           <h1 className="text-5xl sm:text-6xl font-black text-white leading-tight mb-4">Om oss</h1>
-          <p className="text-white/60 text-lg max-w-xl">Etablert på Jæren i 2023</p>
+          <p className="text-white/60 text-lg max-w-xl">{content.stat1Label} i {content.foundingYear}</p>
         </div>
       </section>
 

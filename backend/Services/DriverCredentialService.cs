@@ -1,8 +1,10 @@
+using BusSolutionApi.Data;
 using BusSolutionApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusSolutionApi.Services;
 
-public class DriverCredentialService(ISmsService smsService)
+public class DriverCredentialService(ISmsService smsService, AppDbContext db)
 {
     private const string PasswordAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"; // no 0/O/1/l/I
 
@@ -15,7 +17,8 @@ public class DriverCredentialService(ISmsService smsService)
         driver.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
         driver.MustChangePassword = true;
 
-        var message = $"Hei {driver.FirstName}! Din Kjosavik Reiser-konto er klar.\n" +
+        var cfg = await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync(cancellationToken);
+        var message = $"Hei {driver.FirstName}! Din {cfg?.CompanyName}-konto er klar.\n" +
             $"Logg inn med telefonnummeret ditt ({driver.Phone}) og passordet: {password}\n" +
             "Du må bytte passord ved første innlogging.";
 

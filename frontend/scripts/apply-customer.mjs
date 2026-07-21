@@ -1,0 +1,89 @@
+// Prebuild step (see package.json "prebuild"): stamps this customer's identity into the
+// static files a SPA can't fix at runtime — index.html meta, robots.txt, sitemap.xml, and
+// the logo/favicon/og-image binary assets. Everything else (content, pricing, fleet) is
+// seeded into the database by the backend's DbSeeder + CustomerConfigLoader and served live
+// via GET /api/config — see ../../backend/Data/CustomerConfigLoader.cs for that side.
+import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const frontendRoot = path.resolve(__dirname, '..')
+const repoRoot = path.resolve(frontendRoot, '..')
+
+const slug = process.env.CUSTOMER_SLUG || 'kjosavik'
+const customerDir = path.join(repoRoot, 'customers', slug)
+const configPath = path.join(customerDir, 'config.json')
+
+if (!existsSync(configPath)) {
+  console.error(`[apply-customer] No config found for slug "${slug}" at ${configPath}`)
+  process.exit(1)
+}
+
+const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+const { identity, seo, assets } = config
+
+// 1. Copy customer assets into public/
+const assetsDir = path.join(customerDir, 'assets')
+const publicDir = path.join(frontendRoot, 'public')
+for (const file of [assets.logo, assets.favicon, assets.ogImage].filter(Boolean)) {
+  const src = path.join(assetsDir, file)
+  if (existsSync(src)) copyFileSync(src, path.join(publicDir, file))
+  else console.warn(`[apply-customer] Missing asset: ${src}`)
+}
+
+// 2. Write VITE_* env vars for index.html's %VITE_VAR% interpolation.
+// .env.local (not .env.production.local) so both `vite dev` and `vite build` pick it up.
+// Merged rather than overwritten — .env.local is also where a developer sets VITE_API_BASE.
+const ownedKeys = ['VITE_SITE_TITLE', 'VITE_SITE_DESCRIPTION', 'VITE_OG_SITE_NAME']
+const envLocalPath = path.join(frontendRoot, '.env.local')
+const existingLines = existsSync(envLocalPath)
+  ? readFileSync(envLocalPath, 'utf-8').split('\n').filter(line => {
+      const key = line.split('=')[0]
+      return line.trim() && !ownedKeys.includes(key)
+    })
+  : []
+const newLines = [
+  `VITE_SITE_TITLE=${seo.metaTitle}`,
+  `VITE_SITE_DESCRIPTION=${seo.metaDescription}`,
+  `VITE_OG_SITE_NAME=${seo.ogSiteName}`,
+]
+writeFileSync(envLocalPath, [...existingLines, ...newLines].join('\n') + '\n')
+
+// 3. Generate robots.txt
+const domain = identity.domain.replace(/\/$/, '')
+writeFileSync(path.join(publicDir, 'robots.txt'),
+  `User-agent: *\nAllow: /\n\nSitemap: ${domain}/sitemap.xml\n`)
+
+// 4. Generate sitemap.xml
+const routes = [
+  { path: '/', changefreq: 'weekly', priority: '1.0' },
+  { path: '/book', changefreq: 'monthly', priority: '0.9' },
+  { path: '/priser', changefreq: 'monthly', priority: '0.8' },
+  { path: '/turer', changefreq: 'monthly', priority: '0.8' },
+  { path: '/turer/flyplassturer', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/firmaturer', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/skoleturer', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/sport-og-idrettslag', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/charterturer', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/bryllupstransport', changefreq: 'monthly', priority: '0.7' },
+  { path: '/turer/barnehage', changefreq: 'monthly', priority: '0.6' },
+  { path: '/turer/konserter-og-arrangementer', changefreq: 'monthly', priority: '0.6' },
+  { path: '/turer/dagsturer', changefreq: 'monthly', priority: '0.6' },
+  { path: '/om-oss', changefreq: 'monthly', priority: '0.6' },
+  { path: '/kontakt', changefreq: 'monthly', priority: '0.6' },
+  { path: '/jobb', changefreq: 'monthly', priority: '0.5' },
+  { path: '/faq', changefreq: 'monthly', priority: '0.6' },
+  { path: '/vilkar', changefreq: 'yearly', priority: '0.3' },
+  { path: '/personvern', changefreq: 'yearly', priority: '0.4' },
+]
+const urls = routes.map(r => `
+  <url>
+    <loc>${domain}${r.path}</loc>
+    <changefreq>${r.changefreq}</changefreq>
+    <priority>${r.priority}</priority>
+  </url>`).join('\n')
+writeFileSync(path.join(publicDir, 'sitemap.xml'),
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n\n</urlset>\n`)
+
+console.log(`[apply-customer] Applied "${slug}" — assets, index.html env, robots.txt, sitemap.xml`)

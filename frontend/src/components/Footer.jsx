@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Phone, Mail, MapPin } from 'lucide-react'
-import { getContent } from '../services/config'
+import { useConfig } from '../contexts/ConfigContext'
 
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -23,11 +23,12 @@ const LinkedinIcon = () => (
 )
 
 export default function Footer() {
-  const content = getContent()
+  const { config } = useConfig()
+  const content = config?.content ?? {}
   const socials = [
-    { url: content.socialFacebook, icon: <FacebookIcon /> },
-    { url: content.socialInstagram, icon: <InstagramIcon /> },
-    { url: content.socialLinkedin, icon: <LinkedinIcon /> },
+    { url: config?.socialFacebook, icon: <FacebookIcon /> },
+    { url: config?.socialInstagram, icon: <InstagramIcon /> },
+    { url: config?.socialLinkedin, icon: <LinkedinIcon /> },
   ].filter(s => s.url)
 
   return (
@@ -38,11 +39,11 @@ export default function Footer() {
         {/* Brand */}
         <div className="space-y-4">
           <div className="flex flex-col leading-tight">
-            <span className="text-2xl font-black text-brand-blue tracking-tight">Kjosavik</span>
-            <span className="text-sm font-medium text-gray-400 -mt-1">Reiser AS</span>
+            <span className="text-2xl font-black text-brand-blue tracking-tight">{content.brandNamePrimary}</span>
+            <span className="text-sm font-medium text-gray-400 -mt-1">{content.brandNameSecondary}</span>
           </div>
           <p className="text-gray-400 text-sm leading-relaxed">
-            Pålitelig persontransport siden 2023. Vi frakter deg trygt frem og trygt hjem — over hele Norge.
+            {content.footerAbout}
           </p>
           {socials.length > 0 && (
             <div className="flex gap-3 pt-1">
@@ -102,26 +103,26 @@ export default function Footer() {
           <h4 className="font-bold text-white text-sm uppercase tracking-widest">Kontakt</h4>
           <ul className="space-y-3 text-sm text-gray-400">
             <li>
-              <a href="tel:+4795453807" className="flex items-start gap-2.5 hover:text-brand-blue transition-colors">
+              <a href={`tel:+47${(content.phone || '').replace(/\s+/g, '')}`} className="flex items-start gap-2.5 hover:text-brand-blue transition-colors">
                 <Phone size={15} className="mt-0.5 flex-shrink-0 text-brand-blue" />
-                95 45 38 07
+                {content.phone}
               </a>
             </li>
             <li>
-              <a href="mailto:post@kjosavikreiser.no" className="flex items-start gap-2.5 hover:text-brand-blue transition-colors">
+              <a href={`mailto:${content.email}`} className="flex items-start gap-2.5 hover:text-brand-blue transition-colors">
                 <Mail size={15} className="mt-0.5 flex-shrink-0 text-brand-blue" />
-                post@kjosavikreiser.no
+                {content.email}
               </a>
             </li>
             <li className="flex items-start gap-2.5">
               <MapPin size={15} className="mt-0.5 flex-shrink-0 text-brand-blue" />
-              <span>Fosseikeveien 3, Fosseikeland</span>
+              <span>{content.address}</span>
             </li>
           </ul>
           <div className="pt-2">
             <p className="text-xs text-gray-500 font-medium">Åpningstider</p>
-            <p className="text-sm text-gray-400 mt-1">Man–fre: 07:00–17:00</p>
-            <p className="text-sm text-gray-400">Beredskapsvakt: 24/7</p>
+            <p className="text-sm text-gray-400 mt-1">{content.openingHoursText}</p>
+            <p className="text-sm text-gray-400">{content.emergencyAvailabilityText}</p>
           </div>
         </div>
       </div>
@@ -130,18 +131,14 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full">
-              <span className="text-brand-blue font-bold">✓</span> Euro 5 & 6
-            </span>
-            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full">
-              <span className="text-brand-blue font-bold">✓</span> Etablert 2023
-            </span>
-            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full">
-              <span className="text-brand-blue font-bold">✓</span> Jæren
-            </span>
+            {(content.footerCertifications || []).map((cert) => (
+              <span key={cert} className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full">
+                <span className="text-brand-blue font-bold">✓</span> {cert}
+              </span>
+            ))}
           </div>
           <p className="text-xs text-gray-600">
-            © {new Date().getFullYear()} Kjosavik Reiser AS
+            © {new Date().getFullYear()} {content.companyName}
           </p>
         </div>
       </div>

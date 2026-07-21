@@ -665,6 +665,18 @@ namespace bus_solution_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("BrandNamePrimary")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BrandNameSecondary")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("CustomVariables")
                         .IsRequired()
                         .HasColumnType("text");
@@ -679,9 +691,31 @@ namespace bus_solution_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("EmergencyAvailabilityText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FaviconPath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FooterAbout")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("FooterCertifications")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FoundingYear")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("GeoLat")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("GeoLng")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("HeroCta")
                         .IsRequired()
@@ -705,11 +739,19 @@ namespace bus_solution_api.Migrations
                     b.Property<decimal>("KmRate")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("LogoPath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("MinInvoice")
                         .HasColumnType("numeric");
 
                     b.Property<decimal>("NightSurcharge")
                         .HasColumnType("numeric");
+
+                    b.Property<string>("OgImagePath")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("OmOssCol1Text")
                         .IsRequired()
@@ -743,6 +785,22 @@ namespace bus_solution_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OpeningHoursClose")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OpeningHoursDays")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OpeningHoursOpen")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OpeningHoursText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("OrgNr")
                         .IsRequired()
                         .HasColumnType("text");
@@ -752,6 +810,10 @@ namespace bus_solution_api.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("PriceDisclaimer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrivacyContent")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -823,6 +885,10 @@ namespace bus_solution_api.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("ServicesTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SiteDomain")
                         .IsRequired()
                         .HasColumnType("text");
 

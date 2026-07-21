@@ -1,8 +1,5 @@
 import { useEffect } from 'react'
-
-const SITE = 'Kjosavik Reiser AS'
-const DEFAULT_IMAGE = 'https://www.kjosavikreiser.no/og-image.jpg'
-const BASE_URL = 'https://www.kjosavikreiser.no'
+import { useConfig } from '../contexts/ConfigContext'
 
 function setMeta(selector, attr, value) {
   let el = document.querySelector(selector)
@@ -16,10 +13,15 @@ function setMeta(selector, attr, value) {
 }
 
 export function useSeo({ title, description, image, noindex = false }) {
+  const { config } = useConfig() ?? {}
+  const site = config?.content?.companyName || ''
+  const baseUrl = config?.content?.siteDomain || ''
+  const defaultImage = baseUrl ? baseUrl + (config?.content?.ogImagePath || '') : ''
+
   useEffect(() => {
-    const fullTitle = title ? `${title} – ${SITE}` : SITE
-    const img = image || DEFAULT_IMAGE
-    const url = BASE_URL + window.location.pathname
+    const fullTitle = title ? `${title} – ${site}` : site
+    const img = image || defaultImage
+    const url = baseUrl + window.location.pathname
 
     document.title = fullTitle
 
@@ -34,7 +36,7 @@ export function useSeo({ title, description, image, noindex = false }) {
     setMeta('meta[property="og:image"]', 'content', img)
     setMeta('meta[property="og:image:width"]', 'content', '1200')
     setMeta('meta[property="og:image:height"]', 'content', '630')
-    setMeta('meta[property="og:site_name"]', 'content', SITE)
+    setMeta('meta[property="og:site_name"]', 'content', site)
     setMeta('meta[property="og:locale"]', 'content', 'nb_NO')
 
     // Twitter Card
@@ -43,6 +45,6 @@ export function useSeo({ title, description, image, noindex = false }) {
     setMeta('meta[name="twitter:description"]', 'content', description ?? '')
     setMeta('meta[name="twitter:image"]', 'content', img)
 
-    return () => { document.title = SITE }
-  }, [title, description, image, noindex])
+    return () => { document.title = site }
+  }, [title, description, image, noindex, site, baseUrl, defaultImage])
 }

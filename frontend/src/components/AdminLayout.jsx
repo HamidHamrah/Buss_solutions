@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { clearToken } from '../services/api'
 import { clearDriverSession } from '../services/driverApi'
+import { useConfig } from '../contexts/ConfigContext'
 import {
   LayoutDashboard, Calculator, FileText, LogOut, ChevronRight, Settings, ClipboardList, Handshake, UserCheck, Star, MapPin, HelpCircle, Inbox, CalendarDays, Receipt, Route
 } from 'lucide-react'
@@ -24,6 +25,8 @@ const nav = [
 export default function AdminLayout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { config } = useConfig()
+  const content = config?.content ?? {}
 
   const logout = () => {
     clearToken()
@@ -37,8 +40,8 @@ export default function AdminLayout() {
       <aside className="w-56 bg-brand-dark text-white flex flex-col">
         <div className="px-5 py-5 border-b border-white/10">
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-0.5">Admin</p>
-          <span className="text-lg font-black text-brand-blue">Kjosavik</span>
-          <span className="text-sm text-gray-400 ml-1">Reiser AS</span>
+          <span className="text-lg font-black text-brand-blue">{content.brandNamePrimary}</span>
+          <span className="text-sm text-gray-400 ml-1">{content.brandNameSecondary}</span>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1">
@@ -77,7 +80,7 @@ export default function AdminLayout() {
             {nav.find(n => n.to === pathname)?.label || 'Admin'}
           </h1>
           <div className="flex items-center gap-2 text-xs text-gray-400">
-            <Settings size={13} /> Kjosavik Reiser AS Admin
+            <Settings size={13} /> {content.companyName} Admin
           </div>
         </header>
         <main className="flex-1 p-8 overflow-auto">

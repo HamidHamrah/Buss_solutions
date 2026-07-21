@@ -279,8 +279,25 @@ namespace bus_solution_api.Migrations
                     SmtpFromAddress = table.Column<string>(type: "text", nullable: false),
                     SmtpNotifyTo = table.Column<string>(type: "text", nullable: false),
                     TermsContent = table.Column<string>(type: "text", nullable: false),
+                    PrivacyContent = table.Column<string>(type: "text", nullable: false),
                     BankAccountNumber = table.Column<string>(type: "text", nullable: false),
-                    AdminPasswordHash = table.Column<string>(type: "text", nullable: false)
+                    AdminPasswordHash = table.Column<string>(type: "text", nullable: false),
+                    CompanyName = table.Column<string>(type: "text", nullable: false),
+                    BrandNamePrimary = table.Column<string>(type: "text", nullable: false),
+                    BrandNameSecondary = table.Column<string>(type: "text", nullable: false),
+                    SiteDomain = table.Column<string>(type: "text", nullable: false),
+                    LogoPath = table.Column<string>(type: "text", nullable: false),
+                    FaviconPath = table.Column<string>(type: "text", nullable: false),
+                    OgImagePath = table.Column<string>(type: "text", nullable: false),
+                    FoundingYear = table.Column<string>(type: "text", nullable: false),
+                    GeoLat = table.Column<decimal>(type: "numeric", nullable: false),
+                    GeoLng = table.Column<decimal>(type: "numeric", nullable: false),
+                    OpeningHoursDays = table.Column<string>(type: "text", nullable: false),
+                    OpeningHoursOpen = table.Column<string>(type: "text", nullable: false),
+                    OpeningHoursClose = table.Column<string>(type: "text", nullable: false),
+                    OpeningHoursText = table.Column<string>(type: "text", nullable: false),
+                    EmergencyAvailabilityText = table.Column<string>(type: "text", nullable: false),
+                    FooterCertifications = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {

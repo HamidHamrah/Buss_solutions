@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5115'
+const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5119'
 
 export function getToken() {
   return sessionStorage.getItem('admin_token')

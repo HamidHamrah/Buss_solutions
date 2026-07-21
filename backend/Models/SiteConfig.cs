@@ -91,12 +91,31 @@ public class SiteConfig
 
     // Pages
     public string TermsContent { get; set; } = "";
+    public string PrivacyContent { get; set; } = "";
 
     // Invoice
     public string BankAccountNumber { get; set; } = "";
 
     // Admin
     public string AdminPasswordHash { get; set; } = "";
+
+    // Identity & SEO
+    public string CompanyName { get; set; } = "";
+    public string BrandNamePrimary { get; set; } = "";
+    public string BrandNameSecondary { get; set; } = "";
+    public string SiteDomain { get; set; } = "";
+    public string LogoPath { get; set; } = "/logo.png";
+    public string FaviconPath { get; set; } = "/favicon.svg";
+    public string OgImagePath { get; set; } = "/og-image.jpg";
+    public string FoundingYear { get; set; } = "";
+    public decimal GeoLat { get; set; }
+    public decimal GeoLng { get; set; }
+    public List<string> OpeningHoursDays { get; set; } = [];
+    public string OpeningHoursOpen { get; set; } = "";
+    public string OpeningHoursClose { get; set; } = "";
+    public string OpeningHoursText { get; set; } = "";
+    public string EmergencyAvailabilityText { get; set; } = "";
+    public List<string> FooterCertifications { get; set; } = [];
 }
 
 public class CustomPricingVariable
