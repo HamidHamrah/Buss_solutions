@@ -16,6 +16,7 @@ on:
     branches: [deploy/kjosavik]
     paths-ignore:
       - 'backend/**'
+  workflow_dispatch: {}
 
 env:
   CUSTOMER_SLUG: kjosavik

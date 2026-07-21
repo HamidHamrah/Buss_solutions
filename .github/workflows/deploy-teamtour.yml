@@ -15,6 +15,7 @@ on:
     branches: [deploy/teamtour]
     paths-ignore:
       - 'backend/**'
+  workflow_dispatch: {}
 
 env:
   CUSTOMER_SLUG: teamtour
