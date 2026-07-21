@@ -3,13 +3,18 @@
 # customer. See scripts/stamp-deploy.mjs's comment header for why this file is
 # no longer stamped per-deploy — it's now a static, permanent definition.
 #
-# Kjosavik is the real, already-live service/DB — untouched below. Nidaros,
-# Team Tour, and Haga each already have their OWN live Render service under
-# their original standalone repos using the exact renderServiceName values in
-# customers/<slug>/config.json's deployment block — reusing those names here
-# would risk Render adopting/repointing those real services. So these three
-# use a "-staging" suffix until an explicit future decision to cut over.
+# This is a fresh, parallel set of services for all four customers — none of
+# them reuse an existing live service/Worker name. Each of the four already
+# has its own real, currently-working deployment elsewhere (Kjosavik's real
+# backend is Blueprint-managed from the separate Kjosavik_Reiser repo; Team
+# Tour and Haga each have their own live Render service + Cloudflare Worker
+# under their original standalone repos) — those stay exactly as they are,
+# untouched. Everything below is new infrastructure for the Bus_Solution
+# template; cutting a customer over to it for real is a separate, deliberate
+# future decision, not a side effect of this Blueprint.
 databases:
+  - name: kjosavik-staging-db
+    plan: free
   - name: nidaros-staging-db
     plan: free
   - name: team-tour-staging-db
@@ -18,7 +23,7 @@ databases:
     plan: free
 
 services:
-  - name: kjosavik-reiser-api
+  - name: kjosavik-reiser-api-staging
     type: web
     runtime: docker
     branch: deploy/kjosavik
@@ -32,13 +37,11 @@ services:
       - key: Customer__Slug
         value: kjosavik
       - key: ConnectionStrings__DefaultConnection
-        sync: false
+        fromDatabase:
+          name: kjosavik-staging-db
+          property: connectionString
       - key: Cors__AllowedOrigins__0
-        sync: false
-      - key: Cors__AllowedOrigins__1
-        value: https://kjosavikreiser.no
-      - key: Cors__AllowedOrigins__2
-        value: https://www.kjosavikreiser.no
+        value: https://kjosavik-reiser-staging.s362052.workers.dev
       - key: Jwt__Key
         generateValue: true
       - key: Jwt__Issuer

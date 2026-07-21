@@ -1,4 +1,4 @@
-name: Deploy Kjosavik frontend
+name: Deploy Kjosavik frontend (staging)
 
 # Bus_Solution serves multiple customers from one repo. This workflow only
 # triggers on pushes to deploy/kjosavik (not main), so it never fires for
@@ -6,6 +6,11 @@ name: Deploy Kjosavik frontend
 # only thing that pushes to this branch. The backend deploys separately via
 # Render's own git integration (see render.yaml's per-service `branch:`),
 # which follows the same one-customer-per-branch gating.
+#
+# Deploys under the "-staging" Worker name — kjosavik-reiser (no suffix) is
+# the real, currently-live Worker, deployed separately from the original
+# Kjosavik_Reiser repo. This pipeline is a fresh, parallel deployment; it
+# must not touch the real one until an explicit future cutover decision.
 on:
   push:
     branches: [deploy/kjosavik]
@@ -33,7 +38,7 @@ jobs:
         working-directory: frontend
         run: npm run build
         env:
-          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          VITE_API_BASE: ${{ vars.VITE_API_BASE_KJOSAVIK }}
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
@@ -44,3 +49,4 @@ jobs:
           # (confirmed locally; passing --config explicitly instead would also work
           # but pinning avoids depending on an old version's discovery quirks).
           wranglerVersion: '4'
+          command: deploy --name kjosavik-reiser-staging
