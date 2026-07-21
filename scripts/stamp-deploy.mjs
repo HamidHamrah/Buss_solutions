@@ -1,5 +1,5 @@
 // Run manually before deploying a customer: `node scripts/stamp-deploy.mjs <slug>`
-// Stamps render.yaml's service name + CORS/JWT/Email `value:` entries, and wrangler.jsonc's
+// Stamps render.yaml's service name + CORS/JWT/Email `value:` entries, and wrangler.json's
 // Worker name, from customers/<slug>/config.json's `deployment` block. Never touches
 // `sync: false` entries in render.yaml — those are secrets set manually in Render's
 // dashboard per environment, same convention as every sibling repo this template replaces.
@@ -42,13 +42,13 @@ render = render.replace(/(- key: Email__FromAddress\n\s+value: )\S+/, `$1${deplo
 render = render.replace(/(- key: Email__NotifyTo\n\s+value: )\S+/, `$1${deployment.emailNotifyTo}`)
 writeFileSync(renderPath, render)
 
-// ── wrangler.jsonc ───────────────────────────────────────────────────────────
-const wranglerPath = path.join(repoRoot, 'wrangler.jsonc')
+// ── wrangler.json ───────────────────────────────────────────────────────────
+const wranglerPath = path.join(repoRoot, 'wrangler.json')
 let wrangler = readFileSync(wranglerPath, 'utf-8')
 wrangler = wrangler.replace(/("name":\s*)"[^"]*"/, `$1"${deployment.cloudflareWorkerName}"`)
 writeFileSync(wranglerPath, wrangler)
 
-console.log(`[stamp-deploy] Stamped render.yaml + wrangler.jsonc for "${slug}"`)
+console.log(`[stamp-deploy] Stamped render.yaml + wrangler.json for "${slug}"`)
 console.log(`  Render service: ${deployment.renderServiceName}`)
 console.log(`  Cloudflare Worker: ${deployment.cloudflareWorkerName}`)
 console.log(`  CORS origins: ${deployment.corsOrigins.join(', ')}`)
