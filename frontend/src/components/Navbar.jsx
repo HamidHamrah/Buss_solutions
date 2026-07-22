@@ -31,10 +31,10 @@ export default function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-24">
+        <div className="flex items-center justify-between min-h-24 py-2">
           {/* Logo */}
-          <Link to="/" className="flex flex-col items-center justify-center shrink-0 min-w-0 py-2">
-            <img src={logoPath} alt={companyName} className="h-10 w-auto object-contain shrink-0" />
+          <Link to="/" className="flex flex-col items-center justify-center shrink-0 min-w-0">
+            <img src={logoPath} alt={companyName} className="h-16 w-auto object-contain shrink-0" />
             {!logoIncludesText && (
               <span className="hidden sm:block font-serif text-brand-dark text-base leading-tight tracking-widest whitespace-nowrap overflow-hidden text-ellipsis mt-0.5">{companyName}</span>
             )}
