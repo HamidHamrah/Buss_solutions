@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Lock, AlertCircle, LogIn } from 'lucide-react'
+import { Lock, AlertCircle } from 'lucide-react'
 import { setToken } from '../services/api'
 import { driverApi, setDriverSession } from '../services/driverApi'
 import { useConfig } from '../contexts/ConfigContext'
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { config } = useConfig()
+  const { companyName, logoPath, logoIncludesText } = config?.content ?? {}
 
   const login = async (e) => {
     e.preventDefault()
@@ -35,11 +36,13 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex w-14 h-14 rounded-2xl bg-brand-blue items-center justify-center mb-4">
-            <LogIn size={24} className="text-white" />
+          <Link to="/" className="inline-flex items-center justify-center mb-4">
+            <img src={logoPath} alt={companyName} className="h-16 w-auto object-contain" />
           </Link>
           <h1 className="text-2xl font-black text-brand-dark">Logg inn</h1>
-          <p className="text-sm text-brand-gray mt-1">{config?.content?.companyName}</p>
+          {!logoIncludesText && (
+            <p className="text-sm text-brand-gray mt-1">{companyName}</p>
+          )}
         </div>
 
         <form onSubmit={login} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
