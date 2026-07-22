@@ -33,9 +33,9 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <img src={logoPath} alt={companyName} className="h-14 w-auto object-contain" />
-            <span className="hidden sm:block text-brand-dark font-bold text-lg leading-tight">{companyName}</span>
+          <Link to="/" className="flex items-center gap-3 shrink-0 min-w-0">
+            <img src={logoPath} alt={companyName} className="h-14 w-auto object-contain shrink-0" />
+            <span className="hidden lg:block text-brand-dark font-bold text-sm leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{companyName}</span>
           </Link>
 
           {/* Desktop nav */}
