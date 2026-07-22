@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Lock, AlertCircle, LogIn } from 'lucide-react'
 import { setToken } from '../services/api'
 import { driverApi, setDriverSession } from '../services/driverApi'
+import { useConfig } from '../contexts/ConfigContext'
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('')
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { config } = useConfig()
 
   const login = async (e) => {
     e.preventDefault()
@@ -37,7 +39,7 @@ export default function LoginPage() {
             <LogIn size={24} className="text-white" />
           </Link>
           <h1 className="text-2xl font-black text-brand-dark">Logg inn</h1>
-          <p className="text-sm text-brand-gray mt-1">Kjosavik Reiser AS</p>
+          <p className="text-sm text-brand-gray mt-1">{config?.content?.companyName}</p>
         </div>
 
         <form onSubmit={login} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
