@@ -36,7 +36,7 @@ export default function Navbar() {
           <Link to="/" className="flex flex-col items-center justify-center shrink-0 min-w-0 py-2">
             <img src={logoPath} alt={companyName} className="h-10 w-auto object-contain shrink-0" />
             {!logoIncludesText && (
-              <span className="hidden sm:block font-serif italic text-brand-dark text-base leading-tight whitespace-nowrap overflow-hidden text-ellipsis mt-0.5">{companyName}</span>
+              <span className="hidden sm:block font-serif text-brand-dark text-base leading-tight tracking-widest whitespace-nowrap overflow-hidden text-ellipsis mt-0.5">{companyName}</span>
             )}
           </Link>
 
