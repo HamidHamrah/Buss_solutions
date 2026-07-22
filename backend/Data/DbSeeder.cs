@@ -103,6 +103,7 @@ public static class DbSeeder
             BrandNameSecondary = identity.BrandNameSecondary,
             SiteDomain = identity.Domain,
             LogoPath = "/" + customer.Assets.Logo,
+            LogoIncludesText = customer.Assets.LogoIncludesText,
             FaviconPath = "/" + customer.Assets.Favicon,
             OgImagePath = "/" + customer.Assets.OgImage,
             FoundingYear = identity.FoundingYear,

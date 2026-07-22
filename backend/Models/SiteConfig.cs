@@ -105,6 +105,11 @@ public class SiteConfig
     public string BrandNameSecondary { get; set; } = "";
     public string SiteDomain { get; set; } = "";
     public string LogoPath { get; set; } = "/logo.png";
+    // Some logo assets already have the company name baked into the image
+    // (a wordmark logo); others are icon-only (e.g. a skyline drawing) and
+    // need the name shown as separate text next to them. Per-customer, since
+    // each business supplies its own real logo file.
+    public bool LogoIncludesText { get; set; } = false;
     public string FaviconPath { get; set; } = "/favicon.svg";
     public string OgImagePath { get; set; } = "/og-image.jpg";
     public string FoundingYear { get; set; } = "";

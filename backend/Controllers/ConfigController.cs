@@ -105,6 +105,7 @@ public class ConfigController(AppDbContext db) : ControllerBase
         cfg.BrandNameSecondary = req.BrandNameSecondary;
         cfg.SiteDomain = req.SiteDomain;
         cfg.LogoPath = req.LogoPath;
+        cfg.LogoIncludesText = req.LogoIncludesText;
         cfg.FaviconPath = req.FaviconPath;
         cfg.OgImagePath = req.OgImagePath;
         cfg.FoundingYear = req.FoundingYear;
@@ -181,7 +182,7 @@ public class ConfigController(AppDbContext db) : ControllerBase
             cfg.Stat1Value, cfg.Stat1Label, cfg.Stat2Value, cfg.Stat2Label,
             cfg.Stat3Value, cfg.Stat3Label, cfg.Stat4Value, cfg.Stat4Label,
             cfg.CompanyName, cfg.BrandNamePrimary, cfg.BrandNameSecondary, cfg.SiteDomain,
-            cfg.LogoPath, cfg.FaviconPath, cfg.OgImagePath, cfg.FoundingYear,
+            cfg.LogoPath, cfg.LogoIncludesText, cfg.FaviconPath, cfg.OgImagePath, cfg.FoundingYear,
             cfg.GeoLat, cfg.GeoLng,
             cfg.OpeningHoursDays, cfg.OpeningHoursOpen, cfg.OpeningHoursClose, cfg.OpeningHoursText,
             cfg.EmergencyAvailabilityText, cfg.FooterCertifications,
@@ -243,6 +244,7 @@ public record UpdateConfigRequest(
     string BrandNameSecondary = "",
     string SiteDomain = "",
     string LogoPath = "/logo.png",
+    bool LogoIncludesText = false,
     string FaviconPath = "/favicon.svg",
     string OgImagePath = "/og-image.jpg",
     string FoundingYear = "",

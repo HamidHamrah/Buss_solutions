@@ -58,6 +58,7 @@ public static class CustomerConfigLoader
     public class AssetsSection
     {
         public string Logo { get; set; } = "";
+        public bool LogoIncludesText { get; set; } = false;
         public string Favicon { get; set; } = "";
         public string OgImage { get; set; } = "";
     }

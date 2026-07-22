@@ -739,6 +739,9 @@ namespace bus_solution_api.Migrations
                     b.Property<decimal>("KmRate")
                         .HasColumnType("numeric");
 
+                    b.Property<bool>("LogoIncludesText")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LogoPath")
                         .IsRequired()
                         .HasColumnType("text");

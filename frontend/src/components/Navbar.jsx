@@ -7,7 +7,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const { config } = useConfig()
-  const { phone, email, companyName, logoPath } = config?.content ?? {}
+  const { phone, email, companyName, logoPath, logoIncludesText } = config?.content ?? {}
   const telHref = `tel:+47${(phone || '').replace(/\s+/g, '')}`
 
   const links = [
@@ -35,7 +35,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 shrink-0 min-w-0">
             <img src={logoPath} alt={companyName} className="h-14 w-auto object-contain shrink-0" />
-            <span className="hidden lg:block text-brand-dark font-bold text-sm leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{companyName}</span>
+            {!logoIncludesText && (
+              <span className="hidden lg:block text-brand-dark font-bold text-sm leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{companyName}</span>
+            )}
           </Link>
 
           {/* Desktop nav */}
