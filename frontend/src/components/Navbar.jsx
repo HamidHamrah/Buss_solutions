@@ -33,10 +33,10 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 shrink-0 min-w-0">
-            <img src={logoPath} alt={companyName} className="h-14 w-auto object-contain shrink-0" />
+          <Link to="/" className="flex flex-col items-center justify-center shrink-0 min-w-0 py-2">
+            <img src={logoPath} alt={companyName} className="h-10 w-auto object-contain shrink-0" />
             {!logoIncludesText && (
-              <span className="hidden lg:block text-brand-dark font-bold text-sm leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{companyName}</span>
+              <span className="hidden sm:block font-serif italic text-brand-dark text-base leading-tight whitespace-nowrap overflow-hidden text-ellipsis mt-0.5">{companyName}</span>
             )}
           </Link>
 
