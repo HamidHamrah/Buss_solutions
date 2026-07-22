@@ -9,7 +9,10 @@ import { calcPrice, fmtKr, calcRouteDistance } from '../../utils/bookingHelpers'
 export default function AdminNewBookingPage() {
   const navigate = useNavigate()
   const { config } = useConfig()
-  const { pricing, buses } = config
+  const { pricing } = config
+  const [buses, setBuses] = useState([])
+
+  useEffect(() => { api.getBuses().then(setBuses).catch(() => {}) }, [])
 
   const [state, setState] = useState({
     from: null, to: null,
@@ -42,7 +45,7 @@ export default function AdminNewBookingPage() {
   const updateStop = (i, v) => set({ stops: state.stops.map((st, idx) => idx === i ? { ...st, ...v } : st) })
 
   const km = routeData ? Math.round(routeData.distance / 1000 * (state.tripType === 'return' ? 2 : 1)) : null
-  const bus = buses.find(b => b.id === state.selectedBus)
+  const bus = buses.find(b => b.externalId === state.selectedBus)
   const pricePerBus = km && bus ? calcPrice(pricing, km, state.time, state.tripType, state.busOnStay, bus) : null
   const price = pricePerBus
     ? { base: pricePerBus.base * state.busCount, vat: pricePerBus.vat * state.busCount, total: pricePerBus.total * state.busCount }
@@ -89,7 +92,7 @@ export default function AdminNewBookingPage() {
         returnTime: state.tripType === 'return' ? (state.returnTime || null) : null,
         busOnStay: state.busOnStay,
         stayDurationHours: null,
-        busId: bus?.externalId || state.selectedBus,
+        busId: state.selectedBus,
         busName: bus?.name || '',
         passengers: state.passengers,
         busCount: state.busCount,
@@ -247,9 +250,9 @@ export default function AdminNewBookingPage() {
             <div className="space-y-2">
               {buses.filter(b => b.active).map(b => {
                 const p = km ? calcPrice(pricing, km, state.time, state.tripType, state.busOnStay, b) : null
-                const selected = state.selectedBus === b.id
+                const selected = state.selectedBus === b.externalId
                 return (
-                  <button key={b.id} onClick={() => set({ selectedBus: b.id })}
+                  <button key={b.externalId} onClick={() => set({ selectedBus: b.externalId })}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 text-left transition-colors ${selected ? 'border-brand-blue bg-brand-blue/5' : 'border-gray-200 hover:border-gray-300'}`}>
                     <span className="text-sm font-semibold text-brand-dark">{b.name} · {b.seats * state.busCount} seter</span>
                     {p && <span className="text-sm font-bold text-brand-dark">{fmtKr(p.base * state.busCount)}</span>}
