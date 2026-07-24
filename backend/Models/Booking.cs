@@ -18,7 +18,7 @@ public class Booking
     public int? StayDurationHours { get; set; }
 
     // Bus & passengers
-    public string BusId { get; set; } = "";
+    public string? BusId { get; set; }
     public string BusName { get; set; } = "";
     public int Passengers { get; set; }
     public int BusCount { get; set; } = 1;

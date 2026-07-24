@@ -37,7 +37,6 @@ namespace bus_solution_api.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("BusId")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("BusName")
