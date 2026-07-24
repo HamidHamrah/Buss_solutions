@@ -1,17 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import {
   Calendar, Clock, Users, ChevronRight, ChevronLeft,
   Plus, X, Minus, Wifi, Wind, Utensils, Zap, Bath, CheckCircle,
-  AlertCircle, ArrowRight,
+  AlertCircle, ArrowRight, Shield,
 } from 'lucide-react'
 import { useConfig } from '../contexts/ConfigContext'
 import { api } from '../services/api'
 import { useSeo } from '../hooks/useSeo'
 import AddressInput from '../components/AddressInput'
 import { calcPrice, fmtKr, fmtMin, calcRouteDistance } from '../utils/bookingHelpers'
+import { calcTripPrice } from '../services/config'
 
 // Map amenity string → icon
 const AMENITY_ICONS = {
@@ -230,7 +231,7 @@ function Step1({ state, setState, onCalcRoute, routeData, loading }) {
 }
 
 // ── Step 2 ─────────────────────────────────────────────────────────────────────
-function Step2({ state, setState, routeData, buses, pricing }) {
+function Step2({ state, setState, routeData, categories, pricing }) {
   const km = routeData ? Math.round(routeData.distance / 1000 * (state.tripType === 'return' ? 2 : 1)) : null
 
   return (
@@ -300,30 +301,29 @@ function Step2({ state, setState, routeData, buses, pricing }) {
         </div>
       </div>
 
-      {/* Bus selection */}
+      {/* Bus type selection */}
       <div>
-        <h3 className="text-sm font-semibold text-brand-dark mb-3 uppercase tracking-wider">Velg buss</h3>
-        {buses.filter(b => b.active).length === 0 && (
+        <h3 className="text-sm font-semibold text-brand-dark mb-3 uppercase tracking-wider">Velg busstype</h3>
+        <p className="text-sm text-gray-500 mb-4">Velg busstype som passer for reisen din. Vår sjåfør tildeler den beste tilgjengelige bussen.</p>
+        {categories.length === 0 && (
           <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center text-gray-400">
-            <p className="font-medium mb-1">Ingen busser tilgjengelig</p>
-            <p className="text-sm">Kontakt oss på <a href="tel:45152222" className="text-brand-blue hover:underline">95 45 38 07</a> for å reservere.</p>
+            <p className="font-medium mb-1">Ingen busstyper tilgjengelig</p>
+            <p className="text-sm">Kontakt oss på <a href="tel:+4795453807" className="text-brand-blue hover:underline">95 45 38 07</a> for å reservere.</p>
           </div>
         )}
-        <div className="space-y-4">
-          {buses.filter(b => b.active).map(bus => {
-            const price = km ? calcPrice(pricing, km, state.time, state.tripType, state.busOnStay, bus) : null
-            const enough = bus.seats * (state.busCount || 1) >= state.passengers
-            const selected = state.selectedBus === bus.id
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {categories.map(cat => {
+            const effectivePricing = { ...pricing, kmRate: cat.kmRate, hourRate: cat.hourRate }
+            const price = km ? calcTripPrice(effectivePricing, { km, departureTime: state.time, tripType: state.tripType, busOnStay: state.busOnStay }) : null
+            const selected = state.selectedCategory === cat.id
+            const isMinibuss = cat.name.toLowerCase().includes('mini')
             return (
-              <div key={bus.id}
-                onClick={() => enough && setState(s => ({ ...s, selectedBus: bus.id }))}
+              <div key={cat.id}
+                onClick={() => setState(s => ({ ...s, selectedCategory: cat.id, selectedCategoryName: cat.name }))}
                 className={`border-2 rounded-2xl overflow-hidden transition-all cursor-pointer
-                  ${selected ? 'border-brand-blue shadow-md' : enough ? 'border-gray-200 hover:border-gray-300' : 'border-gray-100 opacity-50 cursor-not-allowed'}`}>
+                  ${selected ? 'border-brand-blue shadow-md' : 'border-gray-200 hover:border-gray-300'}`}>
                 <div className={`px-5 py-3 flex items-center justify-between ${selected ? 'bg-brand-blue-pale' : 'bg-gray-50'}`}>
-                  <span className="font-semibold text-brand-dark text-sm">
-                    Inntil {bus.seats * (state.busCount || 1)} seter{state.busCount > 1 ? ` (${state.busCount} × ${bus.seats})` : ''}
-                  </span>
+                  <span className="font-bold text-brand-dark">{cat.name}</span>
                   {price && (
                     <span className="text-right">
                       <span className="text-xs text-gray-400">Fra </span>
@@ -331,26 +331,25 @@ function Step2({ state, setState, routeData, buses, pricing }) {
                     </span>
                   )}
                 </div>
-                <div className="p-5 flex gap-4">
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    {(bus.images || []).slice(0, 2).map((url, i) => (
-                      <img key={i} src={url} alt={bus.name} className="w-32 h-20 object-cover rounded-xl" />
-                    ))}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-brand-dark mb-1">{bus.name}</h4>
-                    <p className="text-sm text-gray-500 leading-relaxed mb-3">{bus.description}</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(bus.amenities || []).map(a => {
-                        const Icon = AMENITY_ICONS[a] || Zap
-                        return (
-                          <div key={a} className="flex items-center gap-1.5 text-xs text-gray-600">
-                            <Icon size={13} className="text-brand-blue flex-shrink-0" />
-                            {a}
-                          </div>
-                        )
-                      })}
+                <div className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-brand-blue/10 flex items-center justify-center text-2xl">
+                      {isMinibuss ? '🚐' : '🚌'}
                     </div>
+                    <div>
+                      <p className="text-sm text-gray-500">
+                        {isMinibuss ? 'Passer for mindre grupper' : 'Passer for større grupper'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {isMinibuss ? 'Opp til ca. 20 passasjerer' : 'Opp til ca. 60 passasjerer'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-1.5"><Wifi size={12} className="text-brand-blue" /> Wi-Fi ombord</div>
+                    <div className="flex items-center gap-1.5"><Users size={12} className="text-brand-blue" /> Erfaren sjåfør</div>
+                    <div className="flex items-center gap-1.5"><Zap size={12} className="text-brand-blue" /> Klimaanlegg</div>
+                    <div className="flex items-center gap-1.5"><Shield size={12} className="text-brand-blue" /> Forsikret</div>
                   </div>
                 </div>
               </div>
@@ -399,11 +398,14 @@ function Step3({ state, setState }) {
 }
 
 // ── Step 4 ─────────────────────────────────────────────────────────────────────
-function Step4({ state, setState, routeData, submitted, bookingRef, onSubmit, submitError, buses, pricing, content }) {
+function Step4({ state, setState, routeData, submitted, bookingRef, onSubmit, submitError, categories, pricing, content }) {
   const [touched, setTouched] = useState({})
-  const bus = buses.find(b => b.id === state.selectedBus)
+  const selectedCat = categories.find(c => c.id === state.selectedCategory)
   const km = routeData ? Math.round(routeData.distance / 1000 * (state.tripType === 'return' ? 2 : 1)) : 0
-  const price = bus && km ? calcPrice(pricing, km, state.time, state.tripType, state.busOnStay, bus) : null
+  const price = selectedCat && km ? calcTripPrice(
+    { ...pricing, kmRate: selectedCat.kmRate, hourRate: selectedCat.hourRate },
+    { km, departureTime: state.time, tripType: state.tripType, busOnStay: state.busOnStay }
+  ) : null
   const routeCoords = routeData?.geometry?.coordinates?.map(([lon, lat]) => [lat, lon]) || []
   const center = routeCoords[Math.floor(routeCoords.length / 2)] || [63.4, 10.4]
 
@@ -471,10 +473,10 @@ function Step4({ state, setState, routeData, submitted, bookingRef, onSubmit, su
               <span className="font-semibold text-brand-dark">{state.busCount} busser</span>
             </div>
           )}
-          {bus && (
+          {selectedCat && (
             <div className="flex justify-between">
-              <span className="text-gray-500">Buss</span>
-              <span className="font-semibold text-brand-dark">{bus.name}</span>
+              <span className="text-gray-500">Busstype</span>
+              <span className="font-semibold text-brand-dark">{selectedCat.name}</span>
             </div>
           )}
           {price && (
@@ -716,7 +718,11 @@ export default function BookingPage() {
   })
   const navigate = useNavigate()
   const { config } = useConfig()
-  const { pricing, buses, content } = config
+  const { pricing, content } = config
+  const [categories, setCategories] = useState([])
+  useEffect(() => {
+    api.getPriceCategories().then(cats => setCategories((cats || []).sort((a, b) => a.sortOrder - b.sortOrder))).catch(() => {})
+  }, [])
   const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [bookingRef, setBookingRef] = useState('')
@@ -737,7 +743,8 @@ export default function BookingPage() {
     busCount: 1,
     needsTrailer: false,
     needsWheelchair: false,
-    selectedBus: '',
+    selectedCategory: null,
+    selectedCategoryName: '',
     extras: [],
     customerType: 'org',
     company: '', orgNr: '',
@@ -759,11 +766,13 @@ export default function BookingPage() {
   }
 
   const handleSubmit = async () => {
-    const bus = buses.find(b => b.id === state.selectedBus)
+    const selectedCat = categories.find(c => c.id === state.selectedCategory)
     const km = routeData ? Math.round(routeData.distance / 1000 * (state.tripType === 'return' ? 2 : 1)) : 0
-    const pricePerBus = calcPrice(pricing, km, state.time, state.tripType, state.busOnStay, bus) || { base: 0, vat: 0, total: 0 }
+    const pricePerBus = selectedCat
+      ? calcTripPrice({ ...pricing, kmRate: selectedCat.kmRate, hourRate: selectedCat.hourRate }, { km, departureTime: state.time, tripType: state.tripType, busOnStay: state.busOnStay })
+      : { base: 0, vat: 0, total: 0 }
     const busCount = state.busCount || 1
-    const price = { base: pricePerBus.base * busCount, vat: pricePerBus.vat * busCount, total: pricePerBus.total * busCount }
+    const price = { base: (pricePerBus?.base || 0) * busCount, vat: (pricePerBus?.vat || 0) * busCount, total: (pricePerBus?.total || 0) * busCount }
     try {
       const res = await api.createBooking({
         fromAddress: state.from?.address || '',
@@ -779,8 +788,8 @@ export default function BookingPage() {
         returnTime: state.returnTime || null,
         busOnStay: state.busOnStay,
         stayDurationHours: state.stayDurationHours || null,
-        busId: bus?.externalId || state.selectedBus,
-        busName: bus?.name || '',
+        busId: null,
+        busName: selectedCat?.name || state.selectedCategoryName || '',
         passengers: state.passengers,
         busCount: state.busCount || 1,
         needsTrailer: state.needsTrailer,
@@ -813,7 +822,7 @@ export default function BookingPage() {
 
   const canNext = () => {
     if (step === 0) return state.from?.lat && state.to?.lat && state.date
-    if (step === 1) return !!state.selectedBus
+    if (step === 1) return !!state.selectedCategory
     if (step === 2) return true
     return false
   }
@@ -881,9 +890,9 @@ export default function BookingPage() {
         )}
 
         {step === 0 && <Step1 state={state} setState={setState} onCalcRoute={calcRoute} routeData={routeData} loading={loading} />}
-        {step === 1 && <Step2 state={state} setState={setState} routeData={routeData} buses={buses} pricing={pricing} />}
+        {step === 1 && <Step2 state={state} setState={setState} routeData={routeData} categories={categories} pricing={pricing} />}
         {step === 2 && <Step3 state={state} setState={setState} />}
-        {step === 3 && <Step4 state={state} setState={setState} routeData={routeData} submitted={submitted} bookingRef={bookingRef} onSubmit={handleSubmit} submitError={submitError} buses={buses} pricing={pricing} content={content} />}
+        {step === 3 && <Step4 state={state} setState={setState} routeData={routeData} submitted={submitted} bookingRef={bookingRef} onSubmit={handleSubmit} submitError={submitError} categories={categories} pricing={pricing} content={content} />}
 
         {/* Nav buttons */}
         {step < 3 && !submitted && (
