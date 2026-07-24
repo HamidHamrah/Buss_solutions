@@ -348,7 +348,7 @@ public record CreateBookingRequest(
     DateTime DepartureDate, string DepartureTime, string TripType,
     bool BusOnStay, int? StayDurationHours,
     DateTime? ReturnDate, string? ReturnTime,
-    string BusId, string BusName, int Passengers, int BusCount,
+    string? BusId, string BusName, int Passengers, int BusCount,
     bool NeedsTrailer, bool NeedsWheelchair, List<string> SelectedExtras,
     decimal EstimatedBase, decimal EstimatedVat, decimal EstimatedTotal, int DistanceKm,
     string CustomerType, string ContactName, string ContactEmail, string ContactPhone,
