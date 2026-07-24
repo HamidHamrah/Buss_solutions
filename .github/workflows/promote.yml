@@ -33,6 +33,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Must use a PAT here — pushes via GITHUB_TOKEN do not trigger
+          # downstream workflows (deploy-*.yml), so the Cloudflare deploy
+          # would never fire. A PAT push is treated as a user push and does.
+          token: ${{ secrets.GH_PAT }}
 
       - name: Promote selected customer(s)
         run: |
