@@ -29,6 +29,18 @@ npm run dev
 ```
 
 ### Admin panel
-Go to `http://localhost:5173/logg-inn` and log in with the seeded admin's phone number
-and password (see the console output on first backend run, or `Admin:InitialPassword`
-in configuration).
+Go to `http://localhost:5173/logg-inn` and log in with the seeded admin credentials below.
+
+## Demo credentials
+
+All four demo sites share the same seed credentials. The admin account also doubles as
+the driver login — there are no separate seeded driver accounts.
+
+| Customer | URL | Admin/Driver phone | Password |
+|---|---|---|---|
+| Kjosavik Reiser | https://kjosavik-reiser-staging.s362052.workers.dev | 90000000 | Test123! |
+| Nidaros Turbuss | https://nidaros-turbuss-staging.s362052.workers.dev | 90000000 | Test123! |
+| Team Tour | https://team-tour-staging.s362052.workers.dev | 90000000 | Test123! |
+| Haga Turbusser | https://haga-turbusser-staging.s362052.workers.dev | 90000000 | Test123! |
+
+Login page is at `/logg-inn` on each site. Driver app is at `/sjåfør`.
