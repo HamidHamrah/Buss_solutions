@@ -247,6 +247,10 @@ public class BusAssignmentsController(AppDbContext db) : ControllerBase
         a.Title, a.Type, a.Notes, a.BookingReference, a.BookingId, a.Status, a.CreatedAt,
         fromAddress = a.Booking?.FromAddress ?? a.Stops?.OrderBy(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.Start)?.Name,
         toAddress = a.Booking?.ToAddress ?? a.Stops?.OrderByDescending(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.End)?.Name,
+        passengers = a.Booking?.Passengers,
+        customerName = a.Booking?.ContactName,
+        customerPhone = a.Booking?.ContactPhone,
+        bookingStatus = a.Booking?.Status,
     };
 
     private static object ToDetailDto(BusAssignment a) => new
