@@ -277,6 +277,10 @@ namespace bus_solution_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TrackingToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");

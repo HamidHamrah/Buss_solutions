@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.kjosavikreiser.no/sitemap.xml
+Sitemap: https://haga-turbusser.s362052.workers.dev/sitemap.xml

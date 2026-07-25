@@ -29,6 +29,10 @@ public class BusAssignment
     public DateTime? FinishedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Shareable tracking token — generated once when the assignment is created, never changes.
+    // The public /api/track/{token} endpoint uses this so customers can follow the bus without auth.
+    public string TrackingToken { get; set; } = Guid.NewGuid().ToString("N");
+
     // Live position — only ever updated while Status == InProgress.
     public double? CurrentLatitude { get; set; }
     public double? CurrentLongitude { get; set; }

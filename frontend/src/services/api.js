@@ -131,4 +131,9 @@ export const api = {
   updatePaymentStatus: (id, paymentStatus) =>
     request(`/api/bookings/${id}/payment-status`, { method: 'PUT', body: JSON.stringify({ paymentStatus }) }),
   generateInvoice: (id) => request(`/api/bookings/${id}/invoice`, { method: 'POST' }),
+  getTrackingInfo: async (token) => {
+    const res = await fetch(`${BASE}/api/track/${token}`)
+    if (!res.ok) throw new Error('Sporingslenke ikke funnet')
+    return res.json()
+  },
 }

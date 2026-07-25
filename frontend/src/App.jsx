@@ -38,6 +38,7 @@ import BookingLookupPage from './pages/BookingLookupPage'
 import VilkarPage from './pages/VilkarPage'
 import FaqPage from './pages/FaqPage'
 import PersonvernPage from './pages/PersonvernPage'
+import TrackingPage from './pages/TrackingPage'
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/personvern" element={<PersonvernPage />} />
           </Route>
+          <Route path="/sporing/:token" element={<TrackingPage />} />
           <Route path="/logg-inn" element={<LoginPage />} />
           <Route path="/admin/login" element={<Navigate to="/logg-inn" replace />} />
           <Route path="/driver/login" element={<Navigate to="/logg-inn" replace />} />

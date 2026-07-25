@@ -236,7 +236,7 @@ public class BusAssignmentsController(AppDbContext db) : ControllerBase
 
     private static object ToDto(BusAssignment a, Dictionary<string, string>? busNames = null) => new
     {
-        a.Id, a.BusId,
+        a.Id, a.BusId, a.TrackingToken,
         busName = busNames != null && busNames.TryGetValue(a.BusId, out var bn) ? bn : null,
         a.DriverId,
         driverName = a.Driver?.FullName,

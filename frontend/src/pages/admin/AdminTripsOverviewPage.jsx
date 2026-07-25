@@ -1,11 +1,33 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Calendar, Phone, User } from 'lucide-react'
+import { Search, Calendar, Phone, User, Copy, Check } from 'lucide-react'
 import { api } from '../../services/api'
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–'
 const fmtDateShort = (d) => d ? new Date(d).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit' }) : '–'
 const todayStr = () => new Date().toISOString().slice(0, 10)
+
+function CopyTrackingLink({ token }) {
+  const [copied, setCopied] = useState(false)
+  if (!token) return <span className="text-gray-300 text-xs">–</span>
+  const url = `${window.location.origin}/sporing/${token}`
+  const copy = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <button
+      onClick={copy}
+      title={url}
+      className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded border border-gray-200 hover:border-blue-400 hover:text-blue-600 text-gray-500 transition-colors"
+    >
+      {copied ? <Check size={11} className="text-green-600" /> : <Copy size={11} />}
+      {copied ? 'Kopiert!' : 'Kopier lenke'}
+    </button>
+  )
+}
 
 const TRIP_STATUS = [
   { value: '',  label: 'Alle',      dot: 'bg-gray-300',   text: 'text-gray-500',  bg: 'bg-gray-100' },
@@ -133,6 +155,7 @@ export default function AdminTripsOverviewPage() {
               <th className="text-left px-4 py-3 font-semibold">Oppdragsstatus</th>
               <th className="text-left px-4 py-3 font-semibold">Sjåfør</th>
               <th className="text-left px-4 py-3 font-semibold">Kunde</th>
+              <th className="text-left px-4 py-3 font-semibold">Sporing</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -225,19 +248,24 @@ export default function AdminTripsOverviewPage() {
                         </>
                       : <span className="text-gray-300">–</span>}
                   </td>
+
+                  {/* Sporing */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <CopyTrackingLink token={t.trackingToken} />
+                  </td>
                 </tr>
               )
             })}
             {!loading && trips.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-5 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={11} className="px-5 py-12 text-center text-gray-400 text-sm">
                   Ingen turer funnet.
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
-                <td colSpan={10} className="px-5 py-12 text-center">
+                <td colSpan={11} className="px-5 py-12 text-center">
                   <div className="inline-block w-5 h-5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
                 </td>
               </tr>
