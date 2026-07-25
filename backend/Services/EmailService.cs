@@ -249,6 +249,36 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
         await SendAsync(msg);
     }
 
+    // ── Driver: credentials issued / password reset ────────────────────────────
+    public async Task SendDriverCredentialsAsync(string toEmail, string firstName, string phone, string password)
+    {
+        var company = await GetCompanyInfoAsync();
+        var domain = string.IsNullOrWhiteSpace(company.Domain) ? "" : company.Domain;
+        var loginUrl = string.IsNullOrWhiteSpace(domain) ? "/logg-inn" : $"https://{domain}/logg-inn";
+
+        var body = $"""
+            {H2($"Hei {firstName}!")}
+            {P($"Du har fått tilgang til sjåfør-appen hos {company.Name}. Logg inn med informasjonen nedenfor.")}
+            {InfoTable([("Telefonnummer", phone), ("Passord", $"<code style=\"font-size:15px;letter-spacing:1px\">{password}</code>")])}
+            <div style="text-align:center;margin:24px 0">
+              <a href="{loginUrl}"
+                 style="display:inline-block;background:#1a3a5c;color:#ffffff;font-size:15px;font-weight:600;padding:13px 28px;border-radius:6px;text-decoration:none">
+                Logg inn nå
+              </a>
+            </div>
+            {P("Du vil bli bedt om å bytte passord ved første innlogging.")}
+            {Divider()}
+            {P($"Spørsmål? Kontakt oss på <a href=\"tel:{company.Phone}\" style=\"color:#1a3a5c\">{company.Phone}</a>")}
+            """;
+
+        var msg = new MimeMessage();
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
+        msg.To.Add(new MailboxAddress(firstName, toEmail));
+        msg.Subject = $"Din pålogging til {company.Name}";
+        msg.Body = new TextPart("html") { Text = Wrap(body, company) };
+        await SendAsync(msg);
+    }
+
     // ── Customer: trip started — tracking link ─────────────────────────────────
     public async Task SendTripStartedAsync(
         string toEmail, string toName,
