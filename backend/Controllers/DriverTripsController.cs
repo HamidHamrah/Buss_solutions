@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BusSolutionApi.Data;
 using BusSolutionApi.Models;
+using BusSolutionApi.Services;
 using System.Security.Claims;
 
 namespace BusSolutionApi.Controllers;
@@ -10,7 +11,7 @@ namespace BusSolutionApi.Controllers;
 [Authorize(Policy = "DriverOnly")]
 [ApiController]
 [Route("api/driver/trips")]
-public class DriverTripsController(AppDbContext db) : ControllerBase
+public class DriverTripsController(AppDbContext db, EmailService email) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetMyTrips()
@@ -47,7 +48,9 @@ public class DriverTripsController(AppDbContext db) : ControllerBase
     [HttpPost("{id}/start")]
     public async Task<IActionResult> Start(int id)
     {
-        var trip = await GetOwnedTripAsync(id);
+        var trip = await db.BusAssignments
+            .Include(a => a.Booking)
+            .FirstOrDefaultAsync(a => a.Id == id && a.DriverId == GetDriverId());
         if (trip is null) return NotFound();
         if (trip.Status != TripStatus.Planned)
             return BadRequest(new { message = "Turen er allerede startet eller avsluttet." });
@@ -55,6 +58,21 @@ public class DriverTripsController(AppDbContext db) : ControllerBase
         trip.Status = TripStatus.InProgress;
         trip.StartedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+
+        // Send tracking link to customer if we have their email
+        var booking = trip.Booking;
+        if (booking != null && !string.IsNullOrWhiteSpace(booking.ContactEmail))
+        {
+            _ = email.SendTripStartedAsync(
+                booking.ContactEmail,
+                booking.ContactName ?? "Kunde",
+                trip.TrackingToken,
+                trip.Title,
+                booking.FromAddress,
+                booking.ToAddress,
+                trip.StartTime?.ToString("HH:mm"));
+        }
+
         return Ok(new { trip.Status, trip.StartedAt });
     }
 

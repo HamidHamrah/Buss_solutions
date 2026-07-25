@@ -249,6 +249,45 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
         await SendAsync(msg);
     }
 
+    // ── Customer: trip started — tracking link ─────────────────────────────────
+    public async Task SendTripStartedAsync(
+        string toEmail, string toName,
+        string trackingToken, string tripTitle,
+        string? fromAddress, string? toAddress, string? startTime)
+    {
+        var company = await GetCompanyInfoAsync();
+        var domain = string.IsNullOrWhiteSpace(company.Domain) ? "localhost:3000" : company.Domain;
+        var scheme = company.Domain.Contains("localhost") ? "http" : "https";
+        var trackingUrl = $"{scheme}://{domain}/sporing/{trackingToken}";
+
+        var rows = new List<(string, string)>();
+        if (!string.IsNullOrWhiteSpace(fromAddress)) rows.Add(("Fra", fromAddress));
+        if (!string.IsNullOrWhiteSpace(toAddress)) rows.Add(("Til", toAddress));
+        if (!string.IsNullOrWhiteSpace(startTime)) rows.Add(("Avgang", startTime));
+
+        var body = $"""
+            {H2($"Din buss er på vei, {toName}!")}
+            {P("Sjåføren har startet turen. Du kan følge bussens posisjon i sanntid via lenken under.")}
+            {InfoTable(rows)}
+            <div style="text-align:center;margin:24px 0">
+              <a href="{trackingUrl}"
+                 style="display:inline-block;background:#1a3a5c;color:#ffffff;font-size:15px;font-weight:600;padding:13px 28px;border-radius:6px;text-decoration:none">
+                Følg bussen live
+              </a>
+            </div>
+            {P($"Eller kopier lenken: <a href=\"{trackingUrl}\" style=\"color:#1a3a5c\">{trackingUrl}</a>")}
+            {Divider()}
+            {P($"Har du spørsmål? Ring oss på <a href=\"tel:{company.Phone}\" style=\"color:#1a3a5c\">{company.Phone}</a>")}
+            """;
+
+        var msg = new MimeMessage();
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
+        msg.To.Add(new MailboxAddress(toName, toEmail));
+        msg.Subject = $"Din buss er på vei – følg live";
+        msg.Body = new TextPart("html") { Text = Wrap(body, company) };
+        await SendAsync(msg);
+    }
+
     // ── Infrastructure ─────────────────────────────────────────────────────────
     private async Task<CompanyInfo> GetCompanyInfoAsync()
     {
