@@ -41,12 +41,14 @@ public class TwilioSmsService(TwilioSettings settings, ILogger<TwilioSmsService>
             _initialized = true;
         }
 
+        logger.LogInformation("Sending SMS to {Phone} from {From}", normalized, settings.FromNumber);
         try
         {
-            await MessageResource.CreateAsync(
+            var result = await MessageResource.CreateAsync(
                 body: message,
                 from: new PhoneNumber(settings.FromNumber),
                 to: new PhoneNumber(normalized));
+            logger.LogInformation("SMS sent to {Phone}, SID={Sid}, Status={Status}", normalized, result.Sid, result.Status);
         }
         catch (Exception ex)
         {
