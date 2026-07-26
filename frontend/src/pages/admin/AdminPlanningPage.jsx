@@ -218,29 +218,60 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
     setSaving(true)
     setErrors({})
     try {
-      const payload = {
+      const isReturn = !editing && pickedBooking?.tripType === 'return' && pickedBooking?.returnDate
+
+      // Outbound leg (or the only leg for one-way / edits)
+      const outbound = {
         busId: form.busId,
         driverId: form.driverId || null,
         bookingId: form.bookingId || null,
         startDate: form.startDate,
-        endDate: form.endDate,
+        endDate: form.startDate, // outbound ends same day as departure
         startTime: form.startTime || null,
-        endTime: form.endTime || null,
-        title: form.title,
+        endTime: isReturn ? bumpHour(form.startTime) : (form.endTime || null),
+        title: isReturn
+          ? `${form.bookingReference || pickedBooking?.reference} — Tur: ${pickedBooking.fromAddress} → ${pickedBooking.toAddress}`
+          : form.title,
         type: form.type,
         notes: form.notes || null,
         bookingReference: form.bookingReference || null,
       }
+
       const result = editing
-        ? await api.updateAssignment(initial.id, payload)
-        : await api.createAssignment(payload)
-      // Pre-fill the itinerary from the linked booking's own route right away — saves the
-      // admin having to click "Generer fra bestilling" + "Lagre tidtabell" afterwards.
-      if (!editing && payload.type === 'trip' && pickedBooking) {
-        try {
-          await api.replaceAssignmentStops(result.id, stopsToPayload(buildStopsFromBooking(pickedBooking)))
-        } catch { /* non-fatal — admin can still generate/edit stops manually in the trip editor */ }
+        ? await api.updateAssignment(initial.id, { ...outbound, endDate: form.endDate, endTime: form.endTime || null, title: form.title })
+        : await api.createAssignment(outbound)
+
+      if (!editing && outbound.type === 'trip' && pickedBooking) {
+        try { await api.replaceAssignmentStops(result.id, stopsToPayload(buildStopsFromBooking(pickedBooking))) } catch {}
       }
+
+      // Return leg — only for new return-trip bookings
+      if (isReturn) {
+        const returnDate = pickedBooking.returnDate.slice(0, 10)
+        const returnPayload = {
+          busId: form.busId,
+          driverId: form.driverId || null,
+          bookingId: form.bookingId || null,
+          startDate: returnDate,
+          endDate: returnDate,
+          startTime: pickedBooking.returnTime || null,
+          endTime: bumpHour(pickedBooking.returnTime) || null,
+          title: `${form.bookingReference || pickedBooking.reference} — Retur: ${pickedBooking.toAddress} → ${pickedBooking.fromAddress}`,
+          type: form.type,
+          notes: form.notes || null,
+          bookingReference: form.bookingReference || null,
+        }
+        const returnResult = await api.createAssignment(returnPayload)
+        if (outbound.type === 'trip') {
+          try {
+            // Reverse the route for the return leg
+            const returnBooking = { ...pickedBooking, fromAddress: pickedBooking.toAddress, toAddress: pickedBooking.fromAddress }
+            await api.replaceAssignmentStops(returnResult.id, stopsToPayload(buildStopsFromBooking(returnBooking)))
+          } catch {}
+        }
+        onSave(returnResult, false) // add return leg to calendar
+      }
+
       onSave(result, editing)
     } catch (e) {
       setError(e?.message || 'Lagring feilet')
@@ -392,6 +423,11 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
                   {pickedBooking && (
                     <p className="text-xs text-gray-500 truncate">
                       {pickedBooking.contactName} · {pickedBooking.fromAddress} → {pickedBooking.toAddress}
+                    </p>
+                  )}
+                  {pickedBooking?.tripType === 'return' && pickedBooking?.returnDate && (
+                    <p className="text-xs text-amber-600 font-medium mt-0.5">
+                      ↩ Returtur {pickedBooking.returnDate.slice(0, 10)} — dette oppretter 2 separate kjøreordre
                     </p>
                   )}
                 </div>

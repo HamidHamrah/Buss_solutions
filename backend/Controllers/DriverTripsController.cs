@@ -11,7 +11,7 @@ namespace BusSolutionApi.Controllers;
 [Authorize(Policy = "DriverOnly")]
 [ApiController]
 [Route("api/driver/trips")]
-public class DriverTripsController(AppDbContext db, EmailService email) : ControllerBase
+public class DriverTripsController(AppDbContext db, EmailService email, ISmsService sms) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetMyTrips()
@@ -59,18 +59,37 @@ public class DriverTripsController(AppDbContext db, EmailService email) : Contro
         trip.StartedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        // Send tracking link to customer if we have their email
+        // Send tracking link to customer by both SMS and email
         var booking = trip.Booking;
-        if (booking != null && !string.IsNullOrWhiteSpace(booking.ContactEmail))
+        if (booking != null)
         {
-            _ = email.SendTripStartedAsync(
-                booking.ContactEmail,
-                booking.ContactName ?? "Kunde",
-                trip.TrackingToken,
-                trip.Title,
-                booking.FromAddress,
-                booking.ToAddress,
-                trip.StartTime?.ToString("HH:mm"));
+            var cfg = await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync();
+            var domain = cfg?.SiteDomain ?? "";
+            var scheme = domain.Contains("localhost") ? "http" : "https";
+            var trackingUrl = string.IsNullOrWhiteSpace(domain)
+                ? $"/sporing/{trip.TrackingToken}"
+                : $"{scheme}://{domain}/sporing/{trip.TrackingToken}";
+
+            // SMS — immediate, short link
+            if (!string.IsNullOrWhiteSpace(booking.ContactPhone))
+            {
+                var smsText = $"Hei {booking.ContactName?.Split(' ')[0] ?? ""}! " +
+                    $"Bussen din er nå på vei. Følg posisjonen live her: {trackingUrl}";
+                _ = sms.SendAsync(booking.ContactPhone, smsText);
+            }
+
+            // Email — richer format with button
+            if (!string.IsNullOrWhiteSpace(booking.ContactEmail))
+            {
+                _ = email.SendTripStartedAsync(
+                    booking.ContactEmail,
+                    booking.ContactName ?? "Kunde",
+                    trip.TrackingToken,
+                    trip.Title,
+                    booking.FromAddress,
+                    booking.ToAddress,
+                    trip.StartTime?.ToString("HH:mm"));
+            }
         }
 
         return Ok(new { trip.Status, trip.StartedAt });
