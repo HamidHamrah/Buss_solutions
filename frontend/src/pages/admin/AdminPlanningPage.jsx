@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useConfirm } from '../../hooks/useConfirm'
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, RefreshCw, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, Upload, Loader2, RefreshCw, Search } from 'lucide-react'
 import { api } from '../../services/api'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 
@@ -12,11 +12,27 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
   const [open, setOpen] = useState(!bus.id) // auto-open new buses
   const [draft, setDraft] = useState({ ...bus })
   const [newImageUrl, setNewImageUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const [saving, setSaving] = useState(false)
   const set = (f, v) => setDraft(d => ({ ...d, [f]: v }))
   const toggleAmenity = (a) => set('amenities', draft.amenities.includes(a) ? draft.amenities.filter(x => x !== a) : [...draft.amenities, a])
   const addImage = () => { if (!newImageUrl.trim()) return; set('images', [...(draft.images||[]), newImageUrl.trim()]); setNewImageUrl('') }
   const removeImage = (i) => set('images', draft.images.filter((_, idx) => idx !== i))
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await Promise.all(files.map(f => api.uploadPublicFile(f).then(r => r.url)))
+      set('images', [...(draft.images || []), ...urls])
+    } catch {
+      alert('Opplasting feilet. Prøv igjen.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   const save = async () => {
     setSaving(true)
@@ -87,9 +103,20 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
                   <button onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={10}/></button>
                 </div>
               ))}
+              {uploading && (
+                <div className="w-24 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                </div>
+              )}
             </div>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue/5 text-gray-500 hover:text-brand-blue px-3 py-3 rounded-xl text-sm transition-colors disabled:opacity-50 mb-2">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {uploading ? 'Laster opp…' : 'Last opp bilder fra enhet'}
+            </button>
             <div className="flex gap-2">
-              <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} onKeyDown={e => e.key==='Enter' && addImage()} placeholder="https://… bilde-URL" className={`flex-1 ${inp}`}/>
+              <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} onKeyDown={e => e.key==='Enter' && addImage()} placeholder="eller lim inn bilde-URL…" className={`flex-1 ${inp}`}/>
               <button onClick={addImage} className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2.5 rounded-xl text-sm transition-colors"><ImagePlus size={14}/> Legg til</button>
             </div>
           </div>
