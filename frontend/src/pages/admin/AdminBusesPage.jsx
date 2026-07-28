@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Plus, Trash2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, ImagePlus, X, Save, RefreshCw, Search } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Plus, Trash2, ChevronDown, ChevronUp, ToggleLeft, ToggleRight, ImagePlus, Upload, X, Save, RefreshCw, Search, Loader2 } from 'lucide-react'
 import { api } from '../../services/api'
 import { useConfirm } from '../../hooks/useConfirm'
 
@@ -9,6 +9,8 @@ function BusCard({ bus, categories, onSaved, onDeleted, askConfirm }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState({ ...bus })
   const [newImageUrl, setNewImageUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -26,6 +28,21 @@ function BusCard({ bus, categories, onSaved, onDeleted, askConfirm }) {
   }
 
   const removeImage = (i) => set('images', draft.images.filter((_, idx) => idx !== i))
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await Promise.all(files.map(f => api.uploadPublicFile(f).then(r => r.url)))
+      set('images', [...(draft.images || []), ...urls])
+    } catch {
+      alert('Opplasting feilet. Prøv igjen.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   const save = async () => {
     setSaving(true)
@@ -145,7 +162,7 @@ function BusCard({ bus, categories, onSaved, onDeleted, askConfirm }) {
 
           {/* Images */}
           <div>
-            <label className="block text-xs font-semibold text-brand-dark mb-2">Bilder (URL)</label>
+            <label className="block text-xs font-semibold text-brand-dark mb-2">Bilder</label>
             <div className="flex flex-wrap gap-2 mb-3">
               {(draft.images || []).map((url, i) => (
                 <div key={i} className="relative group">
@@ -156,11 +173,27 @@ function BusCard({ bus, categories, onSaved, onDeleted, askConfirm }) {
                   </button>
                 </div>
               ))}
+              {uploading && (
+                <div className="w-24 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <Loader2 size={18} className="animate-spin text-gray-400" />
+                </div>
+              )}
             </div>
+
+            {/* Upload from device */}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={handleFileUpload} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue/5 text-gray-500 hover:text-brand-blue px-3 py-3 rounded-xl text-sm transition-colors disabled:opacity-50 mb-2">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {uploading ? 'Laster opp…' : 'Last opp bilder fra enhet'}
+            </button>
+
+            {/* Or paste URL */}
             <div className="flex gap-2">
               <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addImage()}
-                placeholder="https://... (lim inn bilde-URL)"
+                placeholder="eller lim inn bilde-URL…"
                 className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30" />
               <button onClick={addImage}
                 className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2.5 rounded-xl text-sm transition-colors">
