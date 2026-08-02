@@ -206,6 +206,9 @@ namespace bus_solution_api.Migrations
                     b.Property<int>("Seats")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("ShowOnWebsite")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 

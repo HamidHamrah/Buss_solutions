@@ -31,6 +31,8 @@ import KontaktPage from './pages/KontaktPage'
 import DriverApplicationPage from './pages/DriverApplicationPage'
 import OmOssPage from './pages/OmOssPage'
 import TurerPage from './pages/TurerPage'
+import BusserPage from './pages/BusserPage'
+import BusDetailPage from './pages/BusDetailPage'
 import PriserPage from './pages/PriserPage'
 import TurDetailPage from './pages/TurDetailPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -55,6 +57,8 @@ function App() {
             <Route path="/kontakt" element={<KontaktPage />} />
             <Route path="/turer" element={<TurerPage />} />
             <Route path="/turer/:slug" element={<TurDetailPage />} />
+            <Route path="/busser" element={<BusserPage />} />
+            <Route path="/busser/:id" element={<BusDetailPage />} />
             <Route path="/bestilling" element={<BookingLookupPage />} />
             <Route path="/bestilling/:ref" element={<BookingLookupPage />} />
             <Route path="/vilkar" element={<VilkarPage />} />

@@ -11,6 +11,7 @@ public class Bus
     public List<string> Images { get; set; } = [];
     public List<string> Amenities { get; set; } = [];
     public bool Active { get; set; } = true;
+    public bool ShowOnWebsite { get; set; } = false;
     public int SortOrder { get; set; }
     public int? PriceCategoryId { get; set; }
     public PriceCategory? PriceCategory { get; set; }

@@ -14,7 +14,7 @@ public class BusesController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = false)
     {
         var query = db.Buses.Include(b => b.PriceCategory).AsQueryable();
-        if (activeOnly) query = query.Where(b => b.Active);
+        if (activeOnly) query = query.Where(b => b.Active && b.ShowOnWebsite);
         var buses = await query.OrderBy(b => b.SortOrder).ToListAsync();
         return Ok(buses);
     }
@@ -34,6 +34,7 @@ public class BusesController(AppDbContext db) : ControllerBase
             Images = req.Images,
             Amenities = req.Amenities,
             Active = req.Active,
+            ShowOnWebsite = req.ShowOnWebsite,
             SortOrder = maxOrder + 1,
             PriceCategoryId = req.PriceCategoryId
         };
@@ -57,6 +58,7 @@ public class BusesController(AppDbContext db) : ControllerBase
         bus.Images = req.Images;
         bus.Amenities = req.Amenities;
         bus.Active = req.Active;
+        bus.ShowOnWebsite = req.ShowOnWebsite;
         bus.PriceCategoryId = req.PriceCategoryId;
 
         await db.SaveChangesAsync();
@@ -76,4 +78,4 @@ public class BusesController(AppDbContext db) : ControllerBase
     }
 }
 
-public record BusRequest(string Name, int Seats, string Description, List<string> Images, List<string> Amenities, bool Active, int? PriceCategoryId = null, string RegistrationNumber = "");
+public record BusRequest(string Name, int Seats, string Description, List<string> Images, List<string> Amenities, bool Active, bool ShowOnWebsite = false, int? PriceCategoryId = null, string RegistrationNumber = "");

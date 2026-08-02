@@ -37,7 +37,7 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
   const save = async () => {
     setSaving(true)
     try {
-      const payload = { name: draft.name, registrationNumber: draft.registrationNumber ?? '', seats: draft.seats, description: draft.description, images: draft.images||[], amenities: draft.amenities||[], active: draft.active, priceCategoryId: draft.priceCategoryId ?? null }
+      const payload = { name: draft.name, registrationNumber: draft.registrationNumber ?? '', seats: draft.seats, description: draft.description, images: draft.images||[], amenities: draft.amenities||[], active: draft.active, showOnWebsite: draft.showOnWebsite ?? false, priceCategoryId: draft.priceCategoryId ?? null }
       const updated = bus.id ? await api.updateBus(bus.id, payload) : await api.createBus(payload)
       onSaved(updated); setOpen(false)
     } finally { setSaving(false) }
@@ -65,9 +65,19 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={() => set('active', !draft.active)} className={`transition-colors ${draft.active ? 'text-green-500 hover:text-green-700' : 'text-gray-300 hover:text-gray-500'}`}>
+          <button
+            onClick={() => set('active', !draft.active)}
+            title={draft.active ? 'Aktiv' : 'Inaktiv'}
+            className={`transition-colors ${draft.active ? 'text-green-500 hover:text-green-700' : 'text-gray-300 hover:text-gray-500'}`}>
             {draft.active ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
           </button>
+          <button
+            onClick={() => set('showOnWebsite', !draft.showOnWebsite)}
+            title={draft.showOnWebsite ? 'Vises på nettsiden' : 'Skjult fra nettsiden'}
+            className={`transition-colors ${draft.showOnWebsite ? 'text-brand-blue hover:text-brand-blue-dark' : 'text-gray-300 hover:text-gray-500'}`}>
+            {draft.showOnWebsite ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
+          </button>
+          <span className="text-xs text-gray-400 hidden sm:inline">{draft.showOnWebsite ? 'Nettside' : ''}</span>
           <button onClick={() => setOpen(o => !o)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
             {open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
           </button>
@@ -531,6 +541,7 @@ function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
     notes: initial?.notes ?? '',
     color: initial?.color ?? DRIVER_PALETTE[Math.floor(Math.random() * DRIVER_PALETTE.length)],
     active: initial?.active ?? true,
+    showOnWebsite: initial?.showOnWebsite ?? false,
   })
   const [saving, setSaving] = useState(false)
   const [resending, setResending] = useState(false)
@@ -1106,7 +1117,7 @@ function BusesTab({ buses, setBuses, categories }) {
   const addBus = () => {
     setBuses(prev => [
       ...prev,
-      { _tempId: Date.now(), name: '', registrationNumber: '', seats: 50, description: '', images: [], amenities: ['Wifi', 'Klimaanlegg', 'WC'], active: true, priceCategoryId: categories[0]?.id ?? null }
+      { _tempId: Date.now(), name: '', registrationNumber: '', seats: 50, description: '', images: [], amenities: ['Wifi', 'Klimaanlegg', 'WC'], active: true, showOnWebsite: false, priceCategoryId: categories[0]?.id ?? null }
     ])
   }
 
