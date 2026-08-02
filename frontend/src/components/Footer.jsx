@@ -22,6 +22,13 @@ const LinkedinIcon = () => (
   </svg>
 )
 
+const BloomstackMark = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+    <path d="M12 3c-3.5 3-3.5 7.5 0 11 3.5-3.5 3.5-8 0-11Z" fill="#8fdb5a" />
+    <path d="M12 13c-4.5-1-8 1.5-9 6 4.5 1 8-1.5 9-6Z" fill="#1c5a45" />
+  </svg>
+)
+
 export default function Footer() {
   const { config } = useConfig()
   const content = config?.content ?? {}
@@ -140,6 +147,25 @@ export default function Footer() {
           <p className="text-xs text-gray-600">
             © {new Date().getFullYear()} {content.companyName}
           </p>
+        </div>
+      </div>
+
+      {/* Bloomstack banner */}
+      <div className="bg-black/30 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-center gap-2 text-center text-xs text-gray-500">
+          <BloomstackMark className="h-4 w-4 shrink-0" />
+          <span>
+            {content.brandNamePrimary} er en del av{' '}
+            <a
+              href="https://bloomstack.no"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-gray-300 hover:text-brand-blue transition-colors"
+            >
+              Bloomstack
+            </a>
+            . Les mer om driften av denne løsningen.
+          </span>
         </div>
       </div>
     </footer>
