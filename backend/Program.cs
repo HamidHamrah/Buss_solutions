@@ -81,6 +81,8 @@ var twilioSettings = builder.Configuration.GetSection("Twilio").Get<TwilioSettin
 builder.Services.AddSingleton(twilioSettings);
 builder.Services.AddSingleton<ISmsService, TwilioSmsService>();
 builder.Services.AddScoped<DriverCredentialService>();
+builder.Services.AddHttpClient("fiken");
+builder.Services.AddScoped<FikenService>();
 
 // CORS — allowed origins are configurable via Cors:AllowedOrigins (env: Cors__AllowedOrigins__0, etc.)
 // so new deploy targets (e.g. a Cloudflare Workers URL) can be added without a code change.

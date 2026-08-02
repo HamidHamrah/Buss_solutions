@@ -53,6 +53,10 @@ public class Booking
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
     public DateTime? PaidDate { get; set; }
 
+    // Fiken sync
+    public string? FikenInvoiceId { get; set; }
+    public DateTime? FikenSyncedAt { get; set; }
+
     // Meta
     public BookingStatus Status { get; set; } = BookingStatus.New;
     public string? AdminNotes { get; set; }

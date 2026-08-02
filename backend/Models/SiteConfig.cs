@@ -82,6 +82,10 @@ public class SiteConfig
     public string SocialLinkedin { get; set; } = "";
 
     // SMTP
+    // Fiken accounting integration
+    public string? FikenApiToken { get; set; }
+    public string? FikenCompanySlug { get; set; }
+
     public string SmtpHost { get; set; } = "";
     public int SmtpPort { get; set; } = 587;
     public string SmtpUsername { get; set; } = "";

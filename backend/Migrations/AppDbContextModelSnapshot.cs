@@ -84,6 +84,12 @@ namespace bus_solution_api.Migrations
                     b.Property<decimal>("EstimatedVat")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("FikenInvoiceId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("FikenSyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FromAddress")
                         .IsRequired()
                         .HasColumnType("text");
@@ -703,6 +709,12 @@ namespace bus_solution_api.Migrations
 
                     b.Property<string>("FaviconPath")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FikenApiToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FikenCompanySlug")
                         .HasColumnType("text");
 
                     b.Property<string>("FooterAbout")

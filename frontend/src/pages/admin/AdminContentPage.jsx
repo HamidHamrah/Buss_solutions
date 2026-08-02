@@ -357,6 +357,45 @@ function AdminTab({ content, set, onSave, saved, newPassword, setNewPassword, co
 
       <SaveBar onSave={onSave} saved={saved} />
 
+      <Card title="Fiken regnskapsintegrasjon">
+        <div className={`flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-sm font-medium
+          ${content.fikenApiToken && content.fikenCompanySlug ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+          <span className={`w-2 h-2 rounded-full ${content.fikenApiToken && content.fikenCompanySlug ? 'bg-green-500' : 'bg-amber-400'}`} />
+          {content.fikenApiToken && content.fikenCompanySlug
+            ? 'Fiken er konfigurert — fakturaer synkroniseres automatisk'
+            : 'Fiken ikke konfigurert — fakturaer sendes kun via e-post'}
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Når konfigurert vil fakturaer automatisk opprettes i Fiken og sendes til kunden derfra.
+          Betalingsstatus oppdateres automatisk via webhook når faktura er betalt.
+          Finn API-token under <strong>Innstillinger → Integrasjoner → API</strong> i Fiken.
+          Company slug finner du i URL-en når du er logget inn: <code className="bg-gray-100 px-1 rounded">app.fiken.no/company/din-slug</code>
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Fiken API-token">
+            <input
+              type="password"
+              value={content.fikenApiToken || ''}
+              onChange={e => set('fikenApiToken', e.target.value)}
+              placeholder="Lim inn API-token fra Fiken"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            />
+          </Field>
+          <Field label="Company slug">
+            <TextInput
+              value={content.fikenCompanySlug || ''}
+              onChange={v => set('fikenCompanySlug', v)}
+              placeholder="f.eks. kjosavik-reiser-as"
+            />
+          </Field>
+        </div>
+        {content.fikenApiToken && content.fikenCompanySlug && (
+          <p className="text-xs text-gray-400 mt-3">
+            Webhook-URL å registrere i Fiken: <code className="bg-gray-100 px-1 py-0.5 rounded">{window.location.origin.replace(':5173', ':5000').replace(':5174', ':5000').replace(':5179', ':5000')}/api/fiken/webhook</code>
+          </p>
+        )}
+      </Card>
+
       <Card title="Endre admin-passord">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Nytt passord">

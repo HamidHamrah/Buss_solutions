@@ -9,7 +9,7 @@ namespace BusSolutionApi.Controllers;
 
 [ApiController]
 [Route("api/bookings")]
-public class BookingsController(AppDbContext db, EmailService email) : ControllerBase
+public class BookingsController(AppDbContext db, EmailService email, FikenService fiken) : ControllerBase
 {
     [HttpPost]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("booking")]
@@ -260,7 +260,20 @@ public class BookingsController(AppDbContext db, EmailService email) : Controlle
         booking.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        return Ok(new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate });
+        // Push to Fiken if configured
+        var config = await db.SiteConfigs.FirstOrDefaultAsync();
+        if (config != null && FikenService.IsConfigured(config))
+        {
+            var fikenId = await fiken.CreateInvoiceAsync(booking, config);
+            if (fikenId != null)
+            {
+                booking.FikenInvoiceId = fikenId;
+                booking.FikenSyncedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+            }
+        }
+
+        return Ok(new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate, fikenInvoiceId = booking.FikenInvoiceId });
     }
 
     // Ledger of every generated invoice (bookings with an InvoiceNumber set) — the
