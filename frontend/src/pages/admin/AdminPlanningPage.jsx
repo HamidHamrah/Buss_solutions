@@ -34,13 +34,26 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
     }
   }
 
+  const buildPayload = (overrides = {}) => ({
+    name: draft.name, registrationNumber: draft.registrationNumber ?? '', seats: draft.seats,
+    description: draft.description, images: draft.images||[], amenities: draft.amenities||[],
+    active: draft.active, showOnWebsite: draft.showOnWebsite ?? false,
+    priceCategoryId: draft.priceCategoryId ?? null, ...overrides
+  })
+
   const save = async () => {
     setSaving(true)
     try {
-      const payload = { name: draft.name, registrationNumber: draft.registrationNumber ?? '', seats: draft.seats, description: draft.description, images: draft.images||[], amenities: draft.amenities||[], active: draft.active, showOnWebsite: draft.showOnWebsite ?? false, priceCategoryId: draft.priceCategoryId ?? null }
-      const updated = bus.id ? await api.updateBus(bus.id, payload) : await api.createBus(payload)
+      const updated = bus.id ? await api.updateBus(bus.id, buildPayload()) : await api.createBus(buildPayload())
       onSaved(updated); setOpen(false)
     } finally { setSaving(false) }
+  }
+
+  const quickToggle = async (field, value) => {
+    if (!bus.id) { set(field, value); return }
+    set(field, value)
+    try { const updated = await api.updateBus(bus.id, buildPayload({ [field]: value })); onSaved(updated) }
+    catch { set(field, !value) }
   }
 
   const del = async () => {
@@ -66,13 +79,13 @@ function BusCard({ bus, categories, onSaved, onDeleted }) {
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={() => set('active', !draft.active)}
+            onClick={() => quickToggle('active', !draft.active)}
             title={draft.active ? 'Aktiv' : 'Inaktiv'}
             className={`transition-colors ${draft.active ? 'text-green-500 hover:text-green-700' : 'text-gray-300 hover:text-gray-500'}`}>
             {draft.active ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
           </button>
           <button
-            onClick={() => set('showOnWebsite', !draft.showOnWebsite)}
+            onClick={() => quickToggle('showOnWebsite', !draft.showOnWebsite)}
             title={draft.showOnWebsite ? 'Vises på nettsiden' : 'Skjult fra nettsiden'}
             className={`transition-colors ${draft.showOnWebsite ? 'text-brand-blue hover:text-brand-blue-dark' : 'text-gray-300 hover:text-gray-500'}`}>
             {draft.showOnWebsite ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
