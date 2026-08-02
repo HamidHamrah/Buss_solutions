@@ -11,8 +11,9 @@ export default function Navbar() {
   const telHref = `tel:+47${(phone || '').replace(/\s+/g, '')}`
 
   const links = [
-    { label: 'Leie buss', href: '#services' },
+    { label: 'Leie buss', href: '/book' },
     { label: 'Turer', href: '/turer' },
+    { label: 'Busser', href: '/busser' },
     { label: 'Priser', href: '/priser' },
     { label: 'Om oss', href: '/om-oss' },
     { label: 'Kontakt', href: '/kontakt' },
@@ -20,12 +21,7 @@ export default function Navbar() {
 
   const handleNav = (href) => {
     setOpen(false)
-    if (href.startsWith('#')) {
-      const el = document.querySelector(href)
-      if (el) el.scrollIntoView({ behavior: 'smooth' })
-    } else {
-      navigate(href)
-    }
+    navigate(href)
   }
 
   return (
