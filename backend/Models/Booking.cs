@@ -38,6 +38,11 @@ public class Booking
     public string? PriceAdjustmentNote { get; set; }
     public int DistanceKm { get; set; }
 
+    // Itemized ad-hoc charges added during/after planning (extra hours, cleaning fees, etc.) —
+    // each one adds to EstimatedTotal on its own, unlike PriceAdjustment which is a single
+    // overwritable delta. Locked once InvoiceNumber is set (see BookingsController).
+    public List<ExtraCharge> ExtraCharges { get; set; } = [];
+
     // Contact
     public string CustomerType { get; set; } = "privat"; // privat | org
     public string ContactName { get; set; } = "";
@@ -50,6 +55,10 @@ public class Booking
     // Invoice
     public string? InvoiceNumber { get; set; }
     public DateTime? InvoiceDate { get; set; }
+    // Set only once the invoice has actually been emailed to the customer via Fiken —
+    // InvoiceNumber alone just means a draft/number was generated. Price/extra-charge edits
+    // are locked once this is set, not at InvoiceNumber generation.
+    public DateTime? InvoiceSentAt { get; set; }
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
     public DateTime? PaidDate { get; set; }
 
@@ -76,4 +85,11 @@ public enum PaymentStatus
 {
     Unpaid = 0,
     Paid = 1,
+}
+
+public class ExtraCharge
+{
+    public string Description { get; set; } = "";
+    public decimal Amount { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

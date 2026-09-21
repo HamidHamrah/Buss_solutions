@@ -120,6 +120,7 @@ export const api = {
   deleteServiceCategory: (id) => request(`/api/service-categories/${id}`, { method: 'DELETE' }),
   createBooking: (data) => request('/api/bookings', { method: 'POST', body: JSON.stringify(data) }),
   getBookings: (page = 1) => request(`/api/bookings?page=${page}&pageSize=20`),
+  getBooking: (id) => request(`/api/bookings/${id}`),
   getUnplannedBookings: () => request('/api/bookings/unplanned'),
   getBookingStats: () => request('/api/bookings/stats'),
   lookupBooking: (ref) => request(`/api/bookings/lookup/${encodeURIComponent(ref.trim().toUpperCase())}`),
@@ -127,10 +128,15 @@ export const api = {
   updateBookingNotes: (id, notes) => request(`/api/bookings/${id}/notes`, { method: 'PUT', body: JSON.stringify({ notes }) }),
   updateBookingPrice: (id, priceAdjustment, priceAdjustmentNote) =>
     request(`/api/bookings/${id}/price`, { method: 'PUT', body: JSON.stringify({ priceAdjustment, priceAdjustmentNote }) }),
+  addExtraCharge: (id, description, amount) =>
+    request(`/api/bookings/${id}/extra-charges`, { method: 'POST', body: JSON.stringify({ description, amount }) }),
+  removeExtraCharge: (id, index) =>
+    request(`/api/bookings/${id}/extra-charges/${index}`, { method: 'DELETE' }),
   getInvoices: (status) => request(`/api/bookings/invoices${status ? `?status=${status}` : ''}`),
   updatePaymentStatus: (id, paymentStatus) =>
     request(`/api/bookings/${id}/payment-status`, { method: 'PUT', body: JSON.stringify({ paymentStatus }) }),
   generateInvoice: (id) => request(`/api/bookings/${id}/invoice`, { method: 'POST' }),
+  sendInvoice: (id) => request(`/api/bookings/${id}/invoice/send`, { method: 'POST' }),
   getTrackingInfo: async (token) => {
     const res = await fetch(`${BASE}/api/track/${token}`)
     if (!res.ok) throw new Error('Sporingslenke ikke funnet')

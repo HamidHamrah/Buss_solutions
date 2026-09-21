@@ -150,29 +150,56 @@ public class BookingsController(AppDbContext db, EmailService email, FikenServic
         return Ok(new { total, page, pageSize, bookings });
     }
 
+    // Full booking record for admin use — e.g. re-rendering an invoice for download from
+    // the Fakturaer list, which only carries a slim projection of each booking.
+    [Authorize(Policy = "AdminOnly")]
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var booking = await db.Bookings.FindAsync(id);
+        if (booking == null) return NotFound();
+        return Ok(booking);
+    }
+
     // Bookings that still need a kjøreordre (BusAssignment) scheduled — surfaced in the
     // Planlegger calendar so new orders don't require a manual trip to Bestillinger first.
+    // A booking needs one assignment per bus (BusCount), so it stays in the queue — with a
+    // plannedCount progress indicator — until every bus has a kjøreordre, not just the first.
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("unplanned")]
     public async Task<IActionResult> GetUnplanned()
     {
-        var plannedBookingIds = db.BusAssignments
-            .Where(a => a.BookingId != null)
-            .Select(a => a.BookingId!.Value);
+        var plannedCounts = await db.BusAssignments
+            .Where(a => a.BookingId != null && a.Type == "trip")
+            .GroupBy(a => a.BookingId!.Value)
+            .Select(g => new { BookingId = g.Key, Count = g.Select(a => a.BusId).Distinct().Count() })
+            .ToDictionaryAsync(x => x.BookingId, x => x.Count);
 
         var bookings = await db.Bookings
-            .Where(b => b.Status != BookingStatus.Cancelled && !plannedBookingIds.Contains(b.Id))
+            .Where(b => b.Status != BookingStatus.Cancelled)
             .OrderBy(b => b.DepartureDate)
             .Select(b => new
             {
                 b.Id, b.Reference, b.ContactName, b.ContactPhone,
                 b.FromAddress, b.ToAddress, b.DepartureDate, b.DepartureTime,
                 b.TripType, b.ReturnDate, b.ReturnTime, b.Stops,
-                b.Passengers, b.BusCount, b.EstimatedTotal, b.Status,
+                b.Passengers, b.BusCount, b.EstimatedTotal, b.Status, b.DistanceKm,
             })
             .ToListAsync();
 
-        return Ok(bookings);
+        var result = bookings
+            .Select(b => new
+            {
+                b.Id, b.Reference, b.ContactName, b.ContactPhone,
+                b.FromAddress, b.ToAddress, b.DepartureDate, b.DepartureTime,
+                b.TripType, b.ReturnDate, b.ReturnTime, b.Stops,
+                b.Passengers, b.BusCount, b.EstimatedTotal, b.Status, b.DistanceKm,
+                plannedCount = plannedCounts.GetValueOrDefault(b.Id, 0),
+            })
+            .Where(b => b.plannedCount < b.BusCount)
+            .ToList();
+
+        return Ok(result);
     }
 
     [Authorize(Policy = "AdminOnly")]
@@ -234,6 +261,10 @@ public class BookingsController(AppDbContext db, EmailService email, FikenServic
         if (booking == null) return NotFound();
         booking.Status = req.Status;
         booking.UpdatedAt = DateTime.UtcNow;
+
+        // Invoicing is a separate, explicit step (POST /invoice) — not tied to confirmation.
+        // Confirming only locks in the trip; the final price (plan changes, extra charges)
+        // often isn't known until later, so auto-invoicing here would freeze a stale amount.
         await db.SaveChangesAsync();
         return Ok(booking);
     }
@@ -249,61 +280,169 @@ public class BookingsController(AppDbContext db, EmailService email, FikenServic
         if (!string.IsNullOrEmpty(booking.InvoiceNumber))
             return Ok(new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate });
 
-        // Sequential invoice number: year + zero-padded sequence
-        var year = DateTime.UtcNow.Year;
-        var countThisYear = await db.Bookings
-            .CountAsync(b => b.InvoiceNumber != null && b.InvoiceDate.HasValue && b.InvoiceDate.Value.Year == year);
-        var invoiceNumber = $"{year}-{(countThisYear + 1):D4}";
-
-        booking.InvoiceNumber = invoiceNumber;
-        booking.InvoiceDate = DateTime.UtcNow;
-        booking.UpdatedAt = DateTime.UtcNow;
+        await GenerateInvoiceForBookingAsync(booking);
         await db.SaveChangesAsync();
 
-        // Push to Fiken if configured
-        var config = await db.SiteConfigs.FirstOrDefaultAsync();
-        if (config != null && FikenService.IsConfigured(config))
-        {
-            var fikenId = await fiken.CreateInvoiceAsync(booking, config);
-            if (fikenId != null)
-            {
-                booking.FikenInvoiceId = fikenId;
-                booking.FikenSyncedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync();
-            }
-        }
-
-        return Ok(new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate, fikenInvoiceId = booking.FikenInvoiceId });
+        return Ok(new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate });
     }
 
-    // Ledger of every generated invoice (bookings with an InvoiceNumber set) — the
-    // dedicated view for tracking which invoices are still owed vs. settled, separate
-    // from the booking-status (new/confirmed/cancelled) list.
+    // Assigns a sequential invoice number/date only — no Fiken call, no email. This is the
+    // "draft" step: it locks in a number for accounting but the admin can still review and
+    // adjust the price/extra charges until they explicitly hit "Send" (see SendInvoice).
+    // Commits its own claim on the number so two concurrent calls (double-click, two admin
+    // tabs) can't both pass the null-check below.
+    private async Task GenerateInvoiceForBookingAsync(Booking booking)
+    {
+        if (!string.IsNullOrEmpty(booking.InvoiceNumber)) return;
+
+        var invoiceDate = DateTime.UtcNow;
+        var year = invoiceDate.Year;
+
+        // Retry a few times in case two different bookings race to the same sequence
+        // number — the DB's unique index on InvoiceNumber rejects the loser, who then
+        // re-reads the count and tries the next number.
+        var claimed = 0;
+        string invoiceNumber = "";
+        for (var attempt = 0; attempt < 5 && claimed == 0; attempt++)
+        {
+            var countThisYear = await db.Bookings
+                .CountAsync(b => b.InvoiceNumber != null && b.InvoiceDate.HasValue && b.InvoiceDate.Value.Year == year);
+            invoiceNumber = $"{year}-{(countThisYear + 1):D4}";
+
+            try
+            {
+                // Atomic claim: only succeeds if InvoiceNumber is still null in the database
+                // at this instant. A losing concurrent request gets 0 rows affected.
+                claimed = await db.Bookings
+                    .Where(b => b.Id == booking.Id && b.InvoiceNumber == null)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(b => b.InvoiceNumber, invoiceNumber)
+                        .SetProperty(b => b.InvoiceDate, invoiceDate)
+                        .SetProperty(b => b.UpdatedAt, DateTime.UtcNow));
+            }
+            catch (DbUpdateException) when (attempt < 4)
+            {
+                // Unique index collision with another booking's invoice number — retry.
+            }
+        }
+        if (claimed == 0) return;
+
+        booking.InvoiceNumber = invoiceNumber;
+        booking.InvoiceDate = invoiceDate;
+    }
+
+    // The explicit "Send" step — creates the Fiken draft from the booking's CURRENT totals
+    // (so any price/extra-charge edits made after Generate are included) and immediately
+    // sends it, which is what actually emails the customer. Locks further price edits.
+    [Authorize(Policy = "AdminOnly")]
+    [HttpPost("{id}/invoice/send")]
+    public async Task<IActionResult> SendInvoice(int id)
+    {
+        var booking = await db.Bookings.FindAsync(id);
+        if (booking == null) return NotFound();
+        if (string.IsNullOrEmpty(booking.InvoiceNumber))
+            return BadRequest(new { error = "Faktura må genereres først." });
+        if (booking.InvoiceSentAt != null)
+            return Ok(new { sentAt = booking.InvoiceSentAt, fikenInvoiceId = booking.FikenInvoiceId }); // idempotent
+
+        var config = await db.SiteConfigs.FirstOrDefaultAsync();
+        if (config == null || !FikenService.IsConfigured(config))
+            return BadRequest(new { error = "Fiken er ikke konfigurert — kan ikke sende faktura." });
+
+        // Atomic claim on InvoiceSentAt so a double-click can't send the customer two emails.
+        var sentAt = DateTime.UtcNow;
+        var claimed = await db.Bookings
+            .Where(b => b.Id == id && b.InvoiceSentAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.InvoiceSentAt, sentAt).SetProperty(b => b.UpdatedAt, sentAt));
+        if (claimed == 0)
+        {
+            await db.Entry(booking).ReloadAsync();
+            return Ok(new { sentAt = booking.InvoiceSentAt, fikenInvoiceId = booking.FikenInvoiceId });
+        }
+
+        var fikenId = booking.FikenInvoiceId ?? await fiken.CreateDraftInvoiceAsync(booking, config);
+        if (fikenId == null)
+        {
+            // Roll back the claim so the admin can retry.
+            await db.Bookings.Where(b => b.Id == id).ExecuteUpdateAsync(s => s.SetProperty(b => b.InvoiceSentAt, (DateTime?)null));
+            return StatusCode(502, new { error = "Kunne ikke opprette faktura i Fiken. Prøv igjen." });
+        }
+
+        var sent = await fiken.SendInvoiceAsync(fikenId, booking, config);
+        if (!sent)
+        {
+            await db.Bookings.Where(b => b.Id == id).ExecuteUpdateAsync(s => s.SetProperty(b => b.InvoiceSentAt, (DateTime?)null));
+            return StatusCode(502, new { error = "Faktura ble opprettet i Fiken, men kunne ikke sendes. Prøv igjen." });
+        }
+
+        booking.FikenInvoiceId = fikenId;
+        booking.FikenSyncedAt = sentAt;
+        booking.InvoiceSentAt = sentAt;
+        await db.SaveChangesAsync();
+
+        return Ok(new { sentAt = booking.InvoiceSentAt, fikenInvoiceId = booking.FikenInvoiceId });
+    }
+
+    // Ledger of every confirmed booking, whether invoiced yet or not — the dedicated view for
+    // tracking planning progress alongside invoice/payment status, so admin can see at a
+    // glance what still needs a kjøreordre, what's ready to invoice, and what's been sent.
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("invoices")]
     public async Task<IActionResult> GetInvoices([FromQuery] string? status = null)
     {
-        var query = db.Bookings.Where(b => b.InvoiceNumber != null);
-        if (status == "paid") query = query.Where(b => b.PaymentStatus == PaymentStatus.Paid);
-        else if (status == "unpaid") query = query.Where(b => b.PaymentStatus == PaymentStatus.Unpaid);
+        var busesPlanned = await db.BusAssignments
+            .Where(a => a.BookingId != null && a.Type == "trip")
+            .GroupBy(a => a.BookingId!.Value)
+            .Select(g => new { BookingId = g.Key, Count = g.Select(a => a.BusId).Distinct().Count() })
+            .ToDictionaryAsync(x => x.BookingId, x => x.Count);
+        var incompleteBookingIds = (await db.BusAssignments
+            .Where(a => a.BookingId != null && a.Type == "trip" && a.Status != TripStatus.Completed)
+            .Select(a => a.BookingId!.Value)
+            .Distinct()
+            .ToListAsync()).ToHashSet();
+        var inProgressBookingIds = (await db.BusAssignments
+            .Where(a => a.BookingId != null && a.Type == "trip" && a.Status == TripStatus.InProgress)
+            .Select(a => a.BookingId!.Value)
+            .Distinct()
+            .ToListAsync()).ToHashSet();
 
-        var invoices = await query
-            .OrderByDescending(b => b.InvoiceDate)
-            .Select(b => new
-            {
-                b.Id,
-                b.Reference,
-                b.InvoiceNumber,
-                b.InvoiceDate,
-                b.ContactName,
-                b.OrgName,
-                b.EstimatedTotal,
-                b.PaymentStatus,
-                b.PaidDate,
-            })
+        var bookings = await db.Bookings
+            .Where(b => b.Status == BookingStatus.Confirmed || b.InvoiceNumber != null)
+            .OrderByDescending(b => b.DepartureDate)
             .ToListAsync();
 
-        return Ok(invoices);
+        var result = bookings.Select(b =>
+        {
+            var planned = busesPlanned.GetValueOrDefault(b.Id, 0);
+            var fullyPlanned = planned >= b.BusCount;
+            var hasTrips = planned > 0;
+            var tripStatus = !hasTrips ? "unplanned"
+                : !fullyPlanned ? "planning"
+                : !incompleteBookingIds.Contains(b.Id) ? "completed"
+                : inProgressBookingIds.Contains(b.Id) ? "in_progress"
+                : "planned";
+            var invoiceStatus = b.InvoiceSentAt != null ? "sent" : b.InvoiceNumber != null ? "draft" : "none";
+
+            return new
+            {
+                b.Id, b.Reference, b.ContactName, b.OrgName, b.DepartureDate, b.FromAddress, b.ToAddress,
+                b.InvoiceNumber, b.InvoiceDate, b.InvoiceSentAt,
+                b.EstimatedTotal, b.PaymentStatus, b.PaidDate,
+                busesPlanned = planned, b.BusCount, tripStatus, invoiceStatus,
+            };
+        })
+        .Where(x => status switch
+        {
+            "none" => x.invoiceStatus == "none",
+            "draft" => x.invoiceStatus == "draft",
+            "sent" => x.invoiceStatus == "sent",
+            "unpaid" => x.invoiceStatus == "sent" && x.PaymentStatus == PaymentStatus.Unpaid,
+            "paid" => x.PaymentStatus == PaymentStatus.Paid,
+            _ => true,
+        })
+        .ToList();
+
+        return Ok(result);
     }
 
     [Authorize(Policy = "AdminOnly")]
@@ -343,18 +482,64 @@ public class BookingsController(AppDbContext db, EmailService email, FikenServic
     {
         var booking = await db.Bookings.FindAsync(id);
         if (booking == null) return NotFound();
+        if (booking.InvoiceSentAt != null)
+            return BadRequest(new { error = "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer." });
+
         booking.PriceAdjustment = req.PriceAdjustment;
         booking.PriceAdjustmentNote = req.PriceAdjustmentNote;
-        booking.EstimatedTotal = booking.EstimatedBase + booking.EstimatedVat + req.PriceAdjustment;
+        RecomputeTotal(booking);
         booking.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
-        return Ok(new { booking.EstimatedBase, booking.EstimatedVat, booking.PriceAdjustment, booking.PriceAdjustmentNote, booking.EstimatedTotal });
+        return Ok(new { booking.EstimatedBase, booking.EstimatedVat, booking.PriceAdjustment, booking.PriceAdjustmentNote, booking.ExtraCharges, booking.EstimatedTotal });
     }
+
+    // Itemized ad-hoc charges (extra hours, cleaning fees, damage, etc.) discovered during or
+    // after planning — accumulate as named lines instead of overwriting the single
+    // PriceAdjustment delta. Locked once the invoice is generated, same as PriceAdjustment.
+    [Authorize(Policy = "AdminOnly")]
+    [HttpPost("{id}/extra-charges")]
+    public async Task<IActionResult> AddExtraCharge(int id, [FromBody] ExtraChargeRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Description))
+            return BadRequest(new { error = "Beskrivelse er påkrevd." });
+
+        var booking = await db.Bookings.FindAsync(id);
+        if (booking == null) return NotFound();
+        if (booking.InvoiceSentAt != null)
+            return BadRequest(new { error = "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer." });
+
+        booking.ExtraCharges.Add(new ExtraCharge { Description = req.Description.Trim(), Amount = req.Amount });
+        RecomputeTotal(booking);
+        booking.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { booking.ExtraCharges, booking.EstimatedTotal });
+    }
+
+    [Authorize(Policy = "AdminOnly")]
+    [HttpDelete("{id}/extra-charges/{index:int}")]
+    public async Task<IActionResult> RemoveExtraCharge(int id, int index)
+    {
+        var booking = await db.Bookings.FindAsync(id);
+        if (booking == null) return NotFound();
+        if (index < 0 || index >= booking.ExtraCharges.Count) return NotFound();
+        if (booking.InvoiceSentAt != null)
+            return BadRequest(new { error = "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer." });
+
+        booking.ExtraCharges.RemoveAt(index);
+        RecomputeTotal(booking);
+        booking.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { booking.ExtraCharges, booking.EstimatedTotal });
+    }
+
+    private static void RecomputeTotal(Booking booking) =>
+        booking.EstimatedTotal = booking.EstimatedBase + booking.EstimatedVat + booking.PriceAdjustment + booking.ExtraCharges.Sum(c => c.Amount);
 }
 
 public record UpdateNotesRequest(string? Notes);
 public record UpdatePriceRequest(decimal PriceAdjustment, string? PriceAdjustmentNote);
 public record UpdatePaymentStatusRequest(PaymentStatus PaymentStatus);
+public record ExtraChargeRequest(string Description, decimal Amount);
 
 public record CreateBookingRequest(
     string FromAddress, string ToAddress, List<string> Stops,

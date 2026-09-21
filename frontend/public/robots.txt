@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://haga-turbusser.s362052.workers.dev/sitemap.xml
+Sitemap: https://www.nidarostour.no/sitemap.xml

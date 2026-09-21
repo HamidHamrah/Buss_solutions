@@ -245,8 +245,10 @@ public class BusAssignmentsController(AppDbContext db) : ControllerBase
         startTime = a.StartTime?.ToString("HH:mm"),
         endTime = a.EndTime?.ToString("HH:mm"),
         a.Title, a.Type, a.Notes, a.BookingReference, a.BookingId, a.Status, a.CreatedAt,
-        fromAddress = a.Booking?.FromAddress ?? a.Stops?.OrderBy(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.Start)?.Name,
-        toAddress = a.Booking?.ToAddress ?? a.Stops?.OrderByDescending(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.End)?.Name,
+        // Prefer this assignment's own stops over the booking's address — a return leg has
+        // reversed stops but shares the same Booking (and thus the same Booking.From/ToAddress).
+        fromAddress = a.Stops?.OrderBy(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.Start)?.Name ?? a.Booking?.FromAddress,
+        toAddress = a.Stops?.OrderByDescending(s => s.SequenceNumber).FirstOrDefault(s => s.Kind == TripStopKind.End)?.Name ?? a.Booking?.ToAddress,
         passengers = a.Booking?.Passengers,
         customerName = a.Booking?.ContactName,
         customerPhone = a.Booking?.ContactPhone,

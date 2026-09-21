@@ -84,6 +84,10 @@ namespace bus_solution_api.Migrations
                     b.Property<decimal>("EstimatedVat")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("ExtraCharges")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FikenInvoiceId")
                         .HasColumnType("text");
 
@@ -99,6 +103,9 @@ namespace bus_solution_api.Migrations
 
                     b.Property<string>("InvoiceNumber")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("InvoiceSentAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Message")
                         .HasColumnType("text");
@@ -167,6 +174,10 @@ namespace bus_solution_api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasFilter("\"InvoiceNumber\" IS NOT NULL");
 
                     b.ToTable("Bookings");
                 });

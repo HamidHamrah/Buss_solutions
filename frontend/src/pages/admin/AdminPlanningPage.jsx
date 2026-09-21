@@ -186,12 +186,32 @@ function toMinutes(timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
   return h * 60 + m
 }
-// One-way bookings have no distinct return time, so departure time alone would make
-// start === end and trip the "end must be after start" validation — nudge it forward.
+// Last-resort fallback when there's no distance to estimate from — one-way bookings have
+// no distinct return time, so departure time alone would make start === end and trip the
+// "end must be after start" validation. Just nudges it forward by an hour.
 function bumpHour(timeStr) {
   if (!timeStr) return timeStr
   const [h, m] = timeStr.split(':').map(Number)
   return `${String(Math.min(h + 1, 23)).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+// Booking.distanceKm is the round-trip total when tripType is "return", so halve it back
+// to a single leg's driving distance.
+function oneWayDistanceKm(booking) {
+  if (!booking?.distanceKm) return null
+  return booking.tripType === 'return' ? booking.distanceKm / 2 : booking.distanceKm
+}
+
+// Auto-fills a leg's end time from its one-way driving distance, assuming a coach cruising
+// average (incl. stops) and rounding up to the nearest 15 min. Just a starting point — the
+// admin can always override it in the form.
+const AVG_COACH_SPEED_KMH = 65
+function estimateEndTime(startTime, oneWayKm) {
+  if (!startTime || !oneWayKm) return null
+  const drivingMinutes = Math.max(30, Math.ceil(oneWayKm / AVG_COACH_SPEED_KMH * 4) * 15)
+  const [h, m] = startTime.split(':').map(Number)
+  const total = Math.min(h * 60 + m + drivingMinutes, 23 * 60 + 45) // stay within the same day
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
 // ── Assignment modal ──────────────────────────────────────────────────────────
@@ -205,7 +225,9 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
     startDate: initial ? dateKey(parseDate(initial.startDate)) : linkedBooking ? (linkedBooking.departureDate || '').slice(0, 10) : dateKey(new Date()),
     endDate: initial ? dateKey(parseDate(initial.endDate)) : linkedBooking ? (linkedBooking.returnDate || linkedBooking.departureDate || '').slice(0, 10) : dateKey(new Date()),
     startTime: initial?.startTime || linkedBooking?.departureTime || '',
-    endTime: initial?.endTime || linkedBooking?.returnTime || bumpHour(linkedBooking?.departureTime) || '',
+    endTime: initial?.endTime || linkedBooking?.returnTime
+      || estimateEndTime(linkedBooking?.departureTime, oneWayDistanceKm(linkedBooking))
+      || bumpHour(linkedBooking?.departureTime) || '',
     title: initial?.title ?? (linkedBooking ? `${linkedBooking.reference} — ${linkedBooking.fromAddress} → ${linkedBooking.toAddress}` : ''),
     type: initial?.type ?? 'trip',
     notes: initial?.notes ?? '',
@@ -231,7 +253,9 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
       startDate: (booking.departureDate || '').slice(0, 10),
       endDate: (booking.returnDate || booking.departureDate || '').slice(0, 10),
       startTime: booking.departureTime || f.startTime,
-      endTime: booking.returnTime || bumpHour(booking.departureTime) || f.endTime,
+      endTime: booking.returnTime
+        || estimateEndTime(booking.departureTime, oneWayDistanceKm(booking))
+        || bumpHour(booking.departureTime) || f.endTime,
       title: f.title || `${booking.reference} — ${booking.fromAddress} → ${booking.toAddress}`,
     }))
   }
@@ -278,7 +302,9 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
         startDate: form.startDate,
         endDate: form.startDate, // outbound ends same day as departure
         startTime: form.startTime || null,
-        endTime: isReturn ? bumpHour(form.startTime) : (form.endTime || null),
+        endTime: isReturn
+          ? (estimateEndTime(form.startTime, oneWayDistanceKm(pickedBooking)) || bumpHour(form.startTime))
+          : (form.endTime || null),
         title: isReturn
           ? `${form.bookingReference || pickedBooking?.reference} — Tur: ${pickedBooking.fromAddress} → ${pickedBooking.toAddress}`
           : form.title,
@@ -305,7 +331,8 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
           startDate: returnDate,
           endDate: returnDate,
           startTime: pickedBooking.returnTime || null,
-          endTime: bumpHour(pickedBooking.returnTime) || null,
+          endTime: estimateEndTime(pickedBooking.returnTime, oneWayDistanceKm(pickedBooking))
+            || bumpHour(pickedBooking.returnTime) || null,
           title: `${form.bookingReference || pickedBooking.reference} — Retur: ${pickedBooking.toAddress} → ${pickedBooking.fromAddress}`,
           type: form.type,
           notes: form.notes || null,
@@ -319,10 +346,11 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
             await api.replaceAssignmentStops(returnResult.id, stopsToPayload(buildStopsFromBooking(returnBooking)))
           } catch {}
         }
-        onSave(returnResult, false) // add return leg to calendar
+        onSave(returnResult, false) // add return leg to calendar (no reopen-for-next-bus here)
       }
 
-      onSave(result, editing)
+      // Only offer the "reopen for the next bus" flow on fresh creates, not edits.
+      onSave(result, editing, !editing ? pickedBooking : undefined)
     } catch (e) {
       setError(e?.message || 'Lagring feilet')
     } finally {
@@ -475,9 +503,14 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
                       {pickedBooking.contactName} · {pickedBooking.fromAddress} → {pickedBooking.toAddress}
                     </p>
                   )}
+                  {pickedBooking?.busCount > 1 && (
+                    <p className="text-xs text-brand-blue font-medium mt-0.5">
+                      🚌 {pickedBooking.plannedCount ?? 0}/{pickedBooking.busCount} busser planlagt — denne bestillingen trenger {pickedBooking.busCount} separate kjøreordre
+                    </p>
+                  )}
                   {pickedBooking?.tripType === 'return' && pickedBooking?.returnDate && (
                     <p className="text-xs text-amber-600 font-medium mt-0.5">
-                      ↩ Returtur {pickedBooking.returnDate.slice(0, 10)} — dette oppretter 2 separate kjøreordre
+                      ↩ Returtur {pickedBooking.returnDate.slice(0, 10)} — dette oppretter 2 separate kjøreordre {pickedBooking.busCount > 1 ? 'per buss' : ''}
                     </p>
                   )}
                 </div>
@@ -494,7 +527,9 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
                   {pickerResults.map(b => (
                     <button key={b.id} type="button" onClick={() => linkBooking(b)}
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors">
-                      <p className="text-xs font-mono font-bold text-brand-dark">{b.reference}</p>
+                      <p className="text-xs font-mono font-bold text-brand-dark">
+                        {b.reference}{b.busCount > 1 && <span className="ml-2 text-brand-blue">{b.plannedCount ?? 0}/{b.busCount} busser</span>}
+                      </p>
                       <p className="text-xs text-gray-500 truncate">{b.contactName} · {b.fromAddress} → {b.toAddress}</p>
                     </button>
                   ))}
@@ -536,6 +571,241 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
       </div>
     </div>
     </>
+  )
+}
+
+// ── Bulk plan modal — for multi-bus orders (BusCount > 1). One screen to assign every
+// remaining bus + driver at once instead of repeating the single-assignment flow N times.
+function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
+  const isReturn = booking.tripType === 'return' && !!booking.returnDate
+  const oneWayKm = oneWayDistanceKm(booking)
+  const defaultEndTime = estimateEndTime(booking.departureTime, oneWayKm) || bumpHour(booking.departureTime) || ''
+  const defaultReturnEndTime = isReturn
+    ? (estimateEndTime(booking.returnTime, oneWayKm) || bumpHour(booking.returnTime) || '')
+    : ''
+  const remaining = Math.max(1, (booking.busCount || 1) - (booking.plannedCount || 0))
+
+  // Shared date/time template — applied to every row by default, and re-appliable on demand
+  // via "Bruk for alle rader" after the admin tweaks it. Each row can still be edited alone.
+  const [sharedDate, setSharedDate] = useState((booking.departureDate || '').slice(0, 10))
+  const [sharedStartTime, setSharedStartTime] = useState(booking.departureTime || '')
+  const [sharedEndTime, setSharedEndTime] = useState(defaultEndTime)
+  const [sharedReturnDate, setSharedReturnDate] = useState(isReturn ? (booking.returnDate || '').slice(0, 10) : '')
+  const [sharedReturnStartTime, setSharedReturnStartTime] = useState(booking.returnTime || '')
+  const [sharedReturnEndTime, setSharedReturnEndTime] = useState(defaultReturnEndTime)
+
+  const makeRow = () => ({
+    busId: '', driverId: null,
+    startDate: sharedDate, startTime: sharedStartTime, endTime: sharedEndTime,
+    returnDate: sharedReturnDate, returnStartTime: sharedReturnStartTime, returnEndTime: sharedReturnEndTime,
+    status: 'idle', error: null, // idle | saving | done | error
+  })
+
+  const [rows, setRows] = useState(() => Array.from({ length: remaining }, makeRow))
+  const [saving, setSaving] = useState(false)
+
+  const setRow = (i, patch) => setRows(rs => rs.map((r, idx) => idx === i ? { ...r, ...patch } : r))
+  const addRow = () => setRows(rs => [...rs, makeRow()])
+  const removeRow = (i) => setRows(rs => rs.filter((_, idx) => idx !== i))
+  const usedBusIds = rows.map(r => r.busId).filter(Boolean)
+
+  const applyToAll = () => {
+    setRows(rs => rs.map(r => r.status === 'done' ? r : ({
+      ...r,
+      startDate: sharedDate, startTime: sharedStartTime, endTime: sharedEndTime,
+      returnDate: sharedReturnDate, returnStartTime: sharedReturnStartTime, returnEndTime: sharedReturnEndTime,
+    })))
+  }
+
+  const saveRow = async (i) => {
+    const row = rows[i]
+    if (!row.busId) { setRow(i, { status: 'error', error: 'Velg en buss.' }); return null }
+    if (!row.startDate || !row.startTime || !row.endTime) { setRow(i, { status: 'error', error: 'Dato og klokkeslett er påkrevd.' }); return null }
+    setRow(i, { status: 'saving', error: null })
+    try {
+      const outbound = {
+        busId: row.busId, driverId: row.driverId || null, bookingId: booking.id,
+        startDate: row.startDate, endDate: row.startDate,
+        startTime: row.startTime || null, endTime: row.endTime || null,
+        title: isReturn
+          ? `${booking.reference} — Tur: ${booking.fromAddress} → ${booking.toAddress}`
+          : `${booking.reference} — ${booking.fromAddress} → ${booking.toAddress}`,
+        type: 'trip', notes: null, bookingReference: booking.reference,
+      }
+      const result = await api.createAssignment(outbound)
+      try { await api.replaceAssignmentStops(result.id, stopsToPayload(buildStopsFromBooking(booking))) } catch {}
+
+      let returnResult = null
+      if (isReturn) {
+        const returnDate = row.returnDate || row.startDate
+        const returnPayload = {
+          busId: row.busId, driverId: row.driverId || null, bookingId: booking.id,
+          startDate: returnDate, endDate: returnDate,
+          startTime: row.returnStartTime || null, endTime: row.returnEndTime || null,
+          title: `${booking.reference} — Retur: ${booking.toAddress} → ${booking.fromAddress}`,
+          type: 'trip', notes: null, bookingReference: booking.reference,
+        }
+        returnResult = await api.createAssignment(returnPayload)
+        try {
+          const returnBooking = { ...booking, fromAddress: booking.toAddress, toAddress: booking.fromAddress }
+          await api.replaceAssignmentStops(returnResult.id, stopsToPayload(buildStopsFromBooking(returnBooking)))
+        } catch {}
+      }
+
+      setRow(i, { status: 'done' })
+      return returnResult ? [result, returnResult] : [result]
+    } catch (e) {
+      setRow(i, { status: 'error', error: e?.message || 'Lagring feilet.' })
+      return null
+    }
+  }
+
+  const saveAll = async () => {
+    setSaving(true)
+    const created = []
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].status === 'done') continue
+      const out = await saveRow(i)
+      if (out) created.push(...out)
+    }
+    setSaving(false)
+    if (created.length) onSaved(created)
+  }
+
+  const doneCount = rows.filter(r => r.status === 'done').length
+  const allDone = rows.length > 0 && doneCount === rows.length
+  const timeInp = 'px-2.5 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h2 className="font-bold text-brand-dark">Bulk-planlegg busser</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {booking.reference} · {booking.fromAddress} → {booking.toAddress} · trenger {remaining} {remaining === 1 ? 'buss til' : 'busser til'}
+              {isReturn && ' · tur/retur (2 kjøreordre per buss)'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Shared date/time template — set once, apply to all rows, then tweak individually below */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tidspunkt for alle busser</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Dato</label>
+                <input type="date" value={sharedDate} onChange={e => setSharedDate(e.target.value)} className={`${timeInp} w-full`} />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Fra kl.</label>
+                <input type="time" value={sharedStartTime} onChange={e => setSharedStartTime(e.target.value)} className={`${timeInp} w-full`} />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Til kl.</label>
+                <input type="time" value={sharedEndTime} onChange={e => setSharedEndTime(e.target.value)} className={`${timeInp} w-full`} />
+              </div>
+            </div>
+            {isReturn && (
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Retur dato</label>
+                  <input type="date" value={sharedReturnDate} onChange={e => setSharedReturnDate(e.target.value)} className={`${timeInp} w-full`} />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Retur fra kl.</label>
+                  <input type="time" value={sharedReturnStartTime} onChange={e => setSharedReturnStartTime(e.target.value)} className={`${timeInp} w-full`} />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Retur til kl.</label>
+                  <input type="time" value={sharedReturnEndTime} onChange={e => setSharedReturnEndTime(e.target.value)} className={`${timeInp} w-full`} />
+                </div>
+              </div>
+            )}
+            <button onClick={applyToAll} className="mt-2.5 text-xs font-semibold text-brand-blue hover:text-brand-blue-dark">
+              ↓ Bruk for alle rader
+            </button>
+          </div>
+
+          {rows.map((row, i) => (
+            <div key={i} className={`border rounded-xl p-3.5 transition-colors
+              ${row.status === 'done' ? 'border-green-200 bg-green-50' : row.status === 'error' ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Buss {i + 1}</p>
+                {row.status === 'done'
+                  ? <span className="text-xs font-semibold text-green-700">✓ Lagret</span>
+                  : rows.length > 1 && (
+                    <button onClick={() => removeRow(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={13} /></button>
+                  )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select disabled={row.status === 'done' || row.status === 'saving'} value={row.busId}
+                  onChange={e => setRow(i, { busId: e.target.value })}
+                  className="px-2.5 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 disabled:opacity-60">
+                  <option value="">— Velg buss —</option>
+                  {buses.map(b => {
+                    const takenElsewhere = usedBusIds.includes(b.externalId) && row.busId !== b.externalId
+                    return (
+                      <option key={b.externalId} value={b.externalId} disabled={takenElsewhere}>
+                        {b.name}{takenElsewhere ? ' (allerede valgt)' : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+                <select disabled={row.status === 'done' || row.status === 'saving'} value={row.driverId ?? ''}
+                  onChange={e => setRow(i, { driverId: e.target.value ? Number(e.target.value) : null })}
+                  className="px-2.5 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30 disabled:opacity-60">
+                  <option value="">— Ingen sjåfør —</option>
+                  {drivers.filter(d => d.active).map(d => (
+                    <option key={d.id} value={d.id}>{d.fullName}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <input type="date" disabled={row.status === 'done' || row.status === 'saving'} value={row.startDate}
+                  onChange={e => setRow(i, { startDate: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+                <input type="time" disabled={row.status === 'done' || row.status === 'saving'} value={row.startTime}
+                  onChange={e => setRow(i, { startTime: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+                <input type="time" disabled={row.status === 'done' || row.status === 'saving'} value={row.endTime}
+                  onChange={e => setRow(i, { endTime: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+              </div>
+              {isReturn && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <input type="date" disabled={row.status === 'done' || row.status === 'saving'} value={row.returnDate}
+                    onChange={e => setRow(i, { returnDate: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+                  <input type="time" disabled={row.status === 'done' || row.status === 'saving'} value={row.returnStartTime}
+                    onChange={e => setRow(i, { returnStartTime: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+                  <input type="time" disabled={row.status === 'done' || row.status === 'saving'} value={row.returnEndTime}
+                    onChange={e => setRow(i, { returnEndTime: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
+                </div>
+              )}
+              {row.error && <p className="text-xs text-red-600 mt-1.5">{row.error}</p>}
+            </div>
+          ))}
+
+          <button onClick={addRow} className="text-xs font-semibold text-brand-blue hover:text-brand-blue-dark flex items-center gap-1">
+            <Plus size={13} /> Legg til enda en buss
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+          <span className="text-xs text-gray-400">{doneCount}/{rows.length} lagret</span>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+              {allDone ? 'Lukk' : 'Avbryt'}
+            </button>
+            {!allDone && (
+              <button onClick={saveAll} disabled={saving}
+                className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-full transition-colors disabled:opacity-50">
+                {saving ? 'Lagrer…' : `Opprett ${rows.length - doneCount} kjøreordre`}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1193,6 +1463,7 @@ export default function AdminPlanningPage() {
   const [loading, setLoading] = useState(true)
 
   const [assignModal, setAssignModal] = useState(null)
+  const [bulkPlanModal, setBulkPlanModal] = useState(null)
   const [driverModal, setDriverModal] = useState(null)
 
   const [orderSearch, setOrderSearch] = useState('')
@@ -1223,9 +1494,12 @@ export default function AdminPlanningPage() {
 
   const loadUnplanned = useCallback(async () => {
     try {
-      setUnplannedBookings(await api.getUnplannedBookings())
+      const data = await api.getUnplannedBookings()
+      setUnplannedBookings(data)
+      return data
     } catch {
       setUnplannedBookings([])
+      return []
     }
   }, [])
 
@@ -1255,13 +1529,32 @@ export default function AdminPlanningPage() {
     setAssignModal({ initial: { busId, startDate: date, endDate: date, startTime: time, endTime: `${endH}:00` } })
   }
   const handleAssignmentClick = (a) => setAssignModal({ initial: a })
-  const handlePlanBooking = (booking) => setAssignModal({ initial: null, linkedBooking: booking })
+  // Multi-bus orders (more than one bus still needed) go to the bulk modal so the admin
+  // assigns every remaining bus/driver in one screen instead of repeating this flow N times.
+  const handlePlanBooking = (booking) => {
+    const remaining = (booking.busCount || 1) - (booking.plannedCount || 0)
+    if (remaining > 1) setBulkPlanModal(booking)
+    else setAssignModal({ initial: null, linkedBooking: booking })
+  }
 
-  const handleAssignSave = (result, editing) => {
+  const handleBulkSaved = (created) => {
+    setAssignments(prev => [...prev, ...created])
+    loadUnplanned()
+  }
+  const closeBulkPlan = () => { setBulkPlanModal(null); loadUnplanned() }
+
+  const handleAssignSave = async (result, editing, booking) => {
     setAssignments(prev => editing ? prev.map(a => a.id === result.id ? result : a) : [...prev, result])
-    if (result.bookingId) setUnplannedBookings(prev => prev.filter(b => b.id !== result.bookingId))
     setAssignModal(null)
     setOrderSearchResult(null)
+    if (!result.bookingId) return
+    // Re-fetch rather than assume this booking is fully planned — a multi-bus order (BusCount
+    // > 1) needs one kjøreordre per bus, so it can still have buses left after this save.
+    const fresh = await loadUnplanned()
+    if (!editing && booking?.busCount > 1) {
+      const stillNeeded = fresh.find(b => b.id === booking.id)
+      if (stillNeeded) setAssignModal({ initial: null, linkedBooking: stillNeeded })
+    }
   }
   const handleAssignDelete = (id) => { setAssignments(prev => prev.filter(a => a.id !== id)); setAssignModal(null) }
 
@@ -1392,6 +1685,11 @@ export default function AdminPlanningPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-brand-dark">
                         <span className="font-mono text-xs text-gray-400 mr-2">{b.reference}</span>{b.contactName}
+                        {b.busCount > 1 && (
+                          <span className="ml-2 inline-flex items-center text-xs font-bold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-full">
+                            {b.plannedCount ?? 0}/{b.busCount} busser
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {b.fromAddress} → {b.toAddress} · {parseDate(b.departureDate).toLocaleDateString('nb-NO')}
@@ -1488,6 +1786,10 @@ export default function AdminPlanningPage() {
         <AssignmentModal buses={buses} drivers={drivers} assignments={assignments} initial={assignModal.initial}
           unplannedBookings={unplannedBookings} linkedBooking={assignModal.linkedBooking}
           onSave={handleAssignSave} onDelete={handleAssignDelete} onClose={() => setAssignModal(null)} />
+      )}
+      {bulkPlanModal && (
+        <BulkPlanModal booking={bulkPlanModal} buses={buses} drivers={drivers}
+          onSaved={handleBulkSaved} onClose={closeBulkPlan} />
       )}
       {driverModal && (
         <DriverModal initial={driverModal.initial}

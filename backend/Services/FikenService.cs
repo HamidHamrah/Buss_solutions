@@ -33,7 +33,12 @@ public class FikenService(IHttpClientFactory httpFactory, ILogger<FikenService> 
     /// Push a booking to Fiken as a draft sale/invoice.
     /// Returns the Fiken invoice ID (stored on the Booking for webhook matching).
     /// </summary>
-    public async Task<string?> CreateInvoiceAsync(Booking booking, SiteConfig config)
+    /// <summary>
+    /// Creates a draft sale/invoice in Fiken — does NOT email the customer. Call
+    /// SendInvoiceAsync separately once the admin has reviewed/finalized the booking.
+    /// Returns the Fiken invoice ID (stored on the Booking for webhook matching + sending).
+    /// </summary>
+    public async Task<string?> CreateDraftInvoiceAsync(Booking booking, SiteConfig config)
     {
         if (!IsConfigured(config))
         {
@@ -89,30 +94,38 @@ public class FikenService(IHttpClientFactory httpFactory, ILogger<FikenService> 
 
         // Fiken returns the draft URL in Location header; extract numeric ID
         var location = resp.Headers.Location?.ToString() ?? "";
-        var fikenId = location.Split('/').LastOrDefault(s => long.TryParse(s, out _));
+        return location.Split('/').LastOrDefault(s => long.TryParse(s, out _));
+    }
 
-        // 3. Send the invoice (moves from draft → sent)
-        if (!string.IsNullOrEmpty(fikenId))
+    /// <summary>
+    /// Moves an existing Fiken draft to sent — this is the step that actually emails the
+    /// customer. Returns true on success.
+    /// </summary>
+    public async Task<bool> SendInvoiceAsync(string fikenId, Booking booking, SiteConfig config)
+    {
+        if (!IsConfigured(config)) return false;
+
+        var client = Client(config.FikenApiToken!);
+        var slug = config.FikenCompanySlug!;
+
+        var sendPayload = new
         {
-            var sendPayload = new
-            {
-                invoiceId = long.Parse(fikenId),
-                method = "email",
-                includeDocumentAttachments = false,
-                recipientEmail = booking.ContactEmail,
-                recipientName = booking.ContactName,
-                message = $"Faktura for bussreise — ref. {booking.Reference}",
-                emailSendOption = "auto",
-            };
-            var sendResp = await client.PostAsync($"{BaseUrl}/companies/{slug}/invoices/{fikenId}/send", Json(sendPayload));
-            if (!sendResp.IsSuccessStatusCode)
-            {
-                var body = await sendResp.Content.ReadAsStringAsync();
-                logger.LogWarning("Fiken sendInvoice failed {Status}: {Body}", sendResp.StatusCode, body);
-            }
+            invoiceId = long.Parse(fikenId),
+            method = "email",
+            includeDocumentAttachments = false,
+            recipientEmail = booking.ContactEmail,
+            recipientName = booking.ContactName,
+            message = $"Faktura for bussreise — ref. {booking.Reference}",
+            emailSendOption = "auto",
+        };
+        var sendResp = await client.PostAsync($"{BaseUrl}/companies/{slug}/invoices/{fikenId}/send", Json(sendPayload));
+        if (!sendResp.IsSuccessStatusCode)
+        {
+            var body = await sendResp.Content.ReadAsStringAsync();
+            logger.LogWarning("Fiken sendInvoice failed {Status}: {Body}", sendResp.StatusCode, body);
+            return false;
         }
-
-        return fikenId;
+        return true;
     }
 
     // ── private helpers ───────────────────────────────────────────────────────

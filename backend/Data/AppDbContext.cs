@@ -69,6 +69,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 v => JsonSerializer.Serialize(v, jsonOptions),
                 v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>());
 
+        modelBuilder.Entity<Booking>()
+            .Property(e => e.ExtraCharges)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<ExtraCharge>>(v, jsonOptions) ?? new List<ExtraCharge>());
+
+        // Partial unique index (NULLs excluded) — guards against two bookings ever landing on
+        // the same invoice number if their sequence-number reads race each other.
+        modelBuilder.Entity<Booking>()
+            .HasIndex(b => b.InvoiceNumber)
+            .IsUnique()
+            .HasFilter("\"InvoiceNumber\" IS NOT NULL");
+
         modelBuilder.Entity<ServiceCategory>()
             .Property(e => e.Body)
             .HasConversion(
