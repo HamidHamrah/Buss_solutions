@@ -80,33 +80,35 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 ## Stage 4: Customer Booking Flow
 
+**Status:** Implemented in `BookingPage.jsx` and `components/booking/`.
+
 **Goal:** Make booking feel like building a trip, not filling out a long form.
 
-- [ ] Restructure the steps  
+- [x] Restructure the steps  
   Use a simpler flow: route, date/passengers, bus/extras, contact/review.  
   **Done when:** Each step has one clear purpose.
 
-- [ ] Auto-calculate route  
+- [x] Auto-calculate route  
   Calculate distance after valid addresses are selected instead of relying on a manual-feeling button.  
   **Done when:** Users see route/distance feedback without thinking about the system.
 
-- [ ] Add live route preview  
+- [x] Add live route preview  
   Show map, route line, distance, stops, and return route when relevant.  
   **Done when:** The user can visually understand the trip before submitting.
 
-- [ ] Add sticky trip summary  
+- [x] Add sticky trip summary  
   Keep route, date, passengers, bus choice, and estimated price visible.  
   **Done when:** Users never lose track of what they are requesting.
 
-- [ ] Hide advanced options by default  
+- [x] Hide advanced options by default  
   Put return stops, pause time, trailer, wheelchair, and bus-on-stay in expandable sections.  
   **Done when:** Simple trips feel simple, but complex trips are still supported.
 
-- [ ] Add recommended bus/category  
+- [x] Add recommended bus/category  
   Suggest suitable buses based on passenger count and needs.  
   **Done when:** Customers are guided instead of forced to understand the fleet.
 
-- [ ] Improve final review and success page  
+- [x] Improve final review and success page  
   Show a final summary before submit and a strong confirmation after submit.  
   **Done when:** The user knows what happens next and has a reference number.
 

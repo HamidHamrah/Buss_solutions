@@ -15,6 +15,11 @@ export function fmtKr(n) {
   return 'Kr ' + n.toLocaleString('nb-NO') + ',-'
 }
 
+export const fmtDate = (d, opts = { day: 'numeric', month: 'short', year: 'numeric' }) =>
+  d ? new Date(d).toLocaleDateString('nb-NO', opts) : '–'
+
+export const shortAddr = (a) => a?.address?.split(',')[0] || ''
+
 export function fmtMin(secs) {
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)
