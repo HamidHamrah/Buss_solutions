@@ -14,9 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        customer: [nidaros, haga, kjosavik, teamtour]
+        customer: [NIDAROS, HAGA, KJOSAVIK, TEAMTOUR]
     env:
-      DATABASE_URL: ${{ secrets[format('DATABASE_URL_{0}', upper(matrix.customer))] }}
+      DATABASE_URL: ${{ secrets[format('DATABASE_URL_{0}', matrix.customer)] }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Postgres client
