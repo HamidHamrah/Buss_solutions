@@ -1,3 +1,4 @@
+
 # Product Readiness Roadmap
 
 This roadmap is for turning the bus booking solution from a working demo into a product that feels trustworthy, polished, dynamic, and ready to sell to bus companies.
@@ -228,39 +229,39 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make the product reliable enough to sell and support.
 
-- [x] Move price calculation to backend  
+- [ ] Move price calculation to backend  
   The backend should calculate and validate prices instead of trusting frontend totals.  
   **Done when:** Users cannot manipulate booking price from the browser.
 
-- [x] Add login rate limiting and lockout  
+- [ ] Add login rate limiting and lockout  
   Protect admin and driver login from repeated guessing.  
   **Done when:** Failed login attempts are throttled safely.
 
-- [x] Harden file uploads  
+- [ ] Harden file uploads  
   Validate file types, remove risky public SVG uploads, verify content type, and add rate limits.  
   **Done when:** Public uploads are safe enough for production use.
 
-- [x] Add reliable email handling  
+- [ ] Add reliable email handling  
   Use an outbox or retry mechanism instead of fire-and-forget email sending.  
   **Done when:** Failed emails can be retried and tracked.
 
-- [x] Add audit logging  
+- [ ] Add audit logging  
   Log important admin actions such as status changes, price edits, invoices, drivers, and planning changes.  
   **Done when:** Business-critical changes are traceable.
 
-- [x] Add monitoring and alerts  
+- [ ] Add monitoring and alerts  
   Track API errors, failed jobs, database problems, and uptime.  
   **Done when:** You know when production has a problem before the customer tells you.
 
-- [x] Add backups and restore test  
+- [ ] Add backups and restore test  
   Configure daily backups and test restoring them.  
   **Done when:** You can recover customer data after a database failure.
 
-- [x] Add health checks  
+- [ ] Add health checks  
   Check database, email config, Fiken config, and core API health.  
   **Done when:** System status is visible and reliable.
 
-- [x] Add tests for critical logic  
+- [ ] Add tests for critical logic  
   Cover pricing, invoice numbering, booking creation, and assignment conflicts.  
   **Done when:** Core business logic can be changed without fear.
 

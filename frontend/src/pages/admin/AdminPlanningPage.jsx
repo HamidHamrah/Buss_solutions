@@ -1,176 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useConfirm } from '../../hooks/useConfirm'
 import { useClosingTransition } from '../../hooks/useClosingTransition'
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, Upload, Loader2, RefreshCw, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Calendar, Search } from 'lucide-react'
 import { api } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
 import { findConflicts, ConflictNotice, blockStatusClass, StatusBadge, UnplannedQueue } from '../../components/admin/PlanningParts'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 
-// ── Bus card (inline from AdminBusesPage) ────────────────────────────────────
-const ALL_AMENITIES = ['Wifi', 'Klimaanlegg', 'Kjøkken', '220 Volt', 'WC', 'TV/DVD', 'Mikrofon', 'DAB Radio', 'Bagasjerom', 'Tilhengerfeste', 'Rullestolvennlig']
-
-function BusCard({ bus, categories, onSaved, onDeleted }) {
-  const [confirmModal, askConfirm] = useConfirm()
-  const [open, setOpen] = useState(!bus.id) // auto-open new buses
-  const [draft, setDraft] = useState({ ...bus })
-  const [newImageUrl, setNewImageUrl] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef(null)
-  const [saving, setSaving] = useState(false)
-  const set = (f, v) => setDraft(d => ({ ...d, [f]: v }))
-  const toggleAmenity = (a) => set('amenities', draft.amenities.includes(a) ? draft.amenities.filter(x => x !== a) : [...draft.amenities, a])
-  const addImage = () => { if (!newImageUrl.trim()) return; set('images', [...(draft.images||[]), newImageUrl.trim()]); setNewImageUrl('') }
-  const removeImage = (i) => set('images', draft.images.filter((_, idx) => idx !== i))
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files)
-    if (!files.length) return
-    setUploading(true)
-    try {
-      const urls = await Promise.all(files.map(f => api.uploadPublicFile(f).then(r => r.url)))
-      set('images', [...(draft.images || []), ...urls])
-    } catch {
-      alert('Opplasting feilet. Prøv igjen.')
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
-  }
-
-  const buildPayload = (overrides = {}) => ({
-    name: draft.name, registrationNumber: draft.registrationNumber ?? '', seats: draft.seats,
-    description: draft.description, images: draft.images||[], amenities: draft.amenities||[],
-    active: draft.active, showOnWebsite: draft.showOnWebsite ?? false,
-    priceCategoryId: draft.priceCategoryId ?? null, ...overrides
-  })
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      const updated = bus.id ? await api.updateBus(bus.id, buildPayload()) : await api.createBus(buildPayload())
-      onSaved(updated); setOpen(false)
-    } finally { setSaving(false) }
-  }
-
-  const quickToggle = async (field, value) => {
-    if (!bus.id) { set(field, value); return }
-    set(field, value)
-    try { const updated = await api.updateBus(bus.id, buildPayload({ [field]: value })); onSaved(updated) }
-    catch { set(field, !value) }
-  }
-
-  const del = async () => {
-    if (!bus.id) { onDeleted(bus._tempId); return }
-    if (!await askConfirm({ title: 'Slett buss', message: `Er du sikker på at du vil slette «${bus.name}»?` })) return
-    await api.deleteBus(bus.id); onDeleted(bus.id)
-  }
-
-  const cat = categories.find(c => c.id === draft.priceCategoryId)
-  const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30'
-
-  return (
-    <div className={`bg-white border-2 rounded-2xl overflow-hidden transition-colors ${draft.active ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
-      {confirmModal}
-      <div className="flex items-center gap-4 p-4">
-        {draft.images?.[0] && <img src={draft.images[0]} alt={draft.name} className="w-20 h-14 object-cover rounded-xl flex-shrink-0" />}
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-brand-dark truncate">{draft.name || <span className="text-gray-400">Ny buss</span>}</p>
-          <p className="text-sm text-gray-400">
-            {draft.registrationNumber && <span className="font-mono mr-2">{draft.registrationNumber}</span>}
-            {draft.seats} seter{cat ? ` · ${cat.name}` : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => quickToggle('active', !draft.active)}
-            title={draft.active ? 'Aktiv' : 'Inaktiv'}
-            className={`transition-colors ${draft.active ? 'text-green-500 hover:text-green-700' : 'text-gray-300 hover:text-gray-500'}`}>
-            {draft.active ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
-          </button>
-          <button
-            onClick={() => quickToggle('showOnWebsite', !draft.showOnWebsite)}
-            title={draft.showOnWebsite ? 'Vises på nettsiden' : 'Skjult fra nettsiden'}
-            className={`transition-colors ${draft.showOnWebsite ? 'text-brand-blue hover:text-brand-blue-dark' : 'text-gray-300 hover:text-gray-500'}`}>
-            {draft.showOnWebsite ? <ToggleRight size={28}/> : <ToggleLeft size={28}/>}
-          </button>
-          <span className="text-xs text-gray-400 hidden sm:inline">{draft.showOnWebsite ? 'Nettside' : ''}</span>
-          <button onClick={() => setOpen(o => !o)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
-            {open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
-          </button>
-          <button onClick={del} className="p-2 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors">
-            <Trash2 size={16}/>
-          </button>
-        </div>
-      </div>
-
-      {open && (
-        <div className="border-t border-gray-100 p-5 space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-xs font-semibold text-brand-dark mb-1.5">Navn</label>
-              <input value={draft.name} onChange={e => set('name', e.target.value)} className={inp} /></div>
-            <div><label className="block text-xs font-semibold text-brand-dark mb-1.5">Registreringsnummer</label>
-              <input value={draft.registrationNumber ?? ''} onChange={e => set('registrationNumber', e.target.value)} placeholder="AB 12345" className={`${inp} font-mono`} /></div>
-            <div><label className="block text-xs font-semibold text-brand-dark mb-1.5">Antall seter</label>
-              <input type="number" value={draft.seats} onChange={e => set('seats', Number(e.target.value))} className={inp} /></div>
-            <div><label className="block text-xs font-semibold text-brand-dark mb-1.5">Priskategori</label>
-              <select value={draft.priceCategoryId ?? ''} onChange={e => set('priceCategoryId', e.target.value ? Number(e.target.value) : null)} className={`${inp} bg-white`}>
-                <option value="">— Ingen kategori —</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name} ({c.kmRate} kr/km)</option>)}
-              </select></div>
-          </div>
-          <div><label className="block text-xs font-semibold text-brand-dark mb-1.5">Beskrivelse</label>
-            <textarea value={draft.description} onChange={e => set('description', e.target.value)} rows={2} className={`${inp} resize-none`} /></div>
-          <div>
-            <label className="block text-xs font-semibold text-brand-dark mb-2">Bilder</label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(draft.images||[]).map((url, i) => (
-                <div key={i} className="relative group">
-                  <img src={url} alt="" className="w-24 h-16 object-cover rounded-lg"/>
-                  <button onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X size={10}/></button>
-                </div>
-              ))}
-              {uploading && (
-                <div className="w-24 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Loader2 size={18} className="animate-spin text-gray-400" />
-                </div>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
-            <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue/5 text-gray-500 hover:text-brand-blue px-3 py-3 rounded-xl text-sm transition-colors disabled:opacity-50 mb-2">
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              {uploading ? 'Laster opp…' : 'Last opp bilder fra enhet'}
-            </button>
-            <div className="flex gap-2">
-              <input value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} onKeyDown={e => e.key==='Enter' && addImage()} placeholder="eller lim inn bilde-URL…" className={`flex-1 ${inp}`}/>
-              <button onClick={addImage} className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2.5 rounded-xl text-sm transition-colors"><ImagePlus size={14}/> Legg til</button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-brand-dark mb-2">Fasiliteter</label>
-            <div className="flex flex-wrap gap-2">
-              {ALL_AMENITIES.map(a => (
-                <button key={a} onClick={() => toggleAmenity(a)} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${draft.amenities?.includes(a) ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>{a}</button>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <button onClick={save} disabled={saving} className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
-              <Save size={14}/> {saving ? 'Lagrer…' : 'Lagre buss'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-const TYPE_COLORS = {
-  trip:        { bg: 'bg-blue-500',   text: 'text-white', label: 'Tur' },
-  maintenance: { bg: 'bg-amber-500',  text: 'text-white', label: 'Vedlikehold' },
-  other:       { bg: 'bg-gray-500',   text: 'text-white', label: 'Annet' },
-}
 const NO_ID = '__none__'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -862,190 +698,6 @@ function BulkPlanModal({ booking, buses, drivers, assignments, onSaved, onClose 
   )
 }
 
-// ── Driver modal ──────────────────────────────────────────────────────────────
-const DRIVER_PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899']
-
-function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
-  const [confirmModal, askConfirm] = useConfirm()
-  const { closing, close } = useClosingTransition()
-  const editing = !!initial?.id
-  const [driver, setDriver] = useState(initial ?? null)
-  const [form, setForm] = useState({
-    firstName: initial?.firstName ?? '',
-    lastName: initial?.lastName ?? '',
-    phone: initial?.phone ?? '',
-    email: initial?.email ?? '',
-    notes: initial?.notes ?? '',
-    color: initial?.color ?? DRIVER_PALETTE[Math.floor(Math.random() * DRIVER_PALETTE.length)],
-    active: initial?.active ?? true,
-    showOnWebsite: initial?.showOnWebsite ?? false,
-  })
-  const [saving, setSaving] = useState(false)
-  const [resending, setResending] = useState(false)
-  const [resent, setResent] = useState(false)
-  const [togglingAdmin, setTogglingAdmin] = useState(false)
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30'
-  const canSave = form.firstName.trim() && form.lastName.trim() && (editing || form.phone.trim())
-
-  const handleSave = async () => {
-    if (!canSave) return
-    setSaving(true)
-    try {
-      const result = editing
-        ? await api.updateDriver(initial.id, form)
-        : await api.createDriver(form)
-      onSave(result, editing)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!await askConfirm({ title: 'Slett sjåfør', message: 'Er du sikker på at du vil slette denne sjåføren? Dette kan ikke angres.' })) return
-    setSaving(true)
-    try {
-      await api.deleteDriver(initial.id)
-      onDelete(initial.id)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleResendCredentials = async () => {
-    if (!await askConfirm({ title: 'Send nye påloggingsopplysninger', message: 'Dette lager en ny innloggingskode og et nytt passord, og sender dem til sjåførens telefonnummer på SMS. Gammelt passord slutter å virke.' })) return
-    setResending(true)
-    try {
-      const result = await api.resendDriverCredentials(initial.id)
-      setDriver(result)
-      onUpdated(result)
-      setResent(true)
-      setTimeout(() => setResent(false), 3000)
-    } finally {
-      setResending(false)
-    }
-  }
-
-  const handleToggleAdmin = async () => {
-    const nextIsAdmin = !driver?.isAdmin
-    const message = nextIsAdmin
-      ? `Gi ${driver?.fullName} tilgang til hele adminpanelet?`
-      : `Fjerne admin-tilgangen til ${driver?.fullName}?`
-    if (!await askConfirm({ title: 'Admin-tilgang', message, confirmLabel: nextIsAdmin ? 'Gi tilgang' : 'Fjern tilgang', danger: !nextIsAdmin })) return
-    setTogglingAdmin(true)
-    try {
-      const result = await api.setDriverRole(initial.id, nextIsAdmin)
-      setDriver(result)
-      onUpdated(result)
-    } catch (e) {
-      await askConfirm({ title: 'Kunne ikke endre', message: e?.message || 'Noe gikk galt.', confirmLabel: 'OK', danger: false })
-    } finally {
-      setTogglingAdmin(false)
-    }
-  }
-
-  return (
-    <>
-    {confirmModal}
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 motion-reduce:transition-none ${closing ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.target === e.currentTarget && close(onClose)}>
-      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-sm duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="font-bold text-brand-dark">{editing ? 'Rediger sjåfør' : 'Ny sjåfør'}</h2>
-          <button onClick={() => close(onClose)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-        </div>
-        <div className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-brand-dark mb-1.5">Fornavn *</label>
-              <input value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Ola" className={inp} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-brand-dark mb-1.5">Etternavn *</label>
-              <input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Nordmann" className={inp} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-brand-dark mb-1.5">Telefon *</label>
-            <input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="95 45 38 07" className={inp} />
-            {!editing && (
-              <p className="text-xs text-gray-400 mt-1">Passord sendes på SMS til dette nummeret — sjåføren logger inn med telefonnummeret sitt.</p>
-            )}
-          </div>
-
-          {editing && (
-            <>
-              <div className="bg-gray-50 rounded-xl p-3.5 space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Innlogging</p>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Logger inn med</span>
-                  <span className="font-mono font-semibold text-brand-dark">{driver?.phone}</span>
-                </div>
-                {driver?.mustChangePassword && (
-                  <p className="text-xs text-amber-600 font-semibold">Venter på første innlogging / passordbytte</p>
-                )}
-                <button onClick={handleResendCredentials} disabled={resending}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:text-brand-blue-dark disabled:opacity-40 mt-1">
-                  <RefreshCw size={12} className={resending ? 'animate-spin' : ''} />
-                  {resent ? 'Sendt!' : resending ? 'Sender…' : 'Send nytt passord på SMS'}
-                </button>
-              </div>
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3.5">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin-tilgang</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {driver?.isAdmin ? 'Har full tilgang til adminpanelet.' : 'Kun tilgang til sjåfør-appen.'}
-                  </p>
-                </div>
-                <button onClick={handleToggleAdmin} disabled={togglingAdmin}
-                  className={`flex-shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors disabled:opacity-40
-                    ${driver?.isAdmin ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-brand-blue text-white hover:bg-brand-blue-dark'}`}>
-                  {togglingAdmin ? '…' : driver?.isAdmin ? 'Fjern admin' : 'Gjør til admin'}
-                </button>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-brand-dark mb-1.5">E-post</label>
-                <input value={form.email} onChange={e => set('email', e.target.value)} placeholder="ola@kjosavikreiser.no" className={inp} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-brand-dark mb-1.5">Farge i kalender</label>
-                <div className="flex gap-2 flex-wrap">
-                  {DRIVER_PALETTE.map(c => (
-                    <button key={c} onClick={() => set('color', c)}
-                      style={{ backgroundColor: c }}
-                      className={`w-7 h-7 rounded-full transition-transform motion-reduce:transition-none ${form.color === c ? 'scale-125 ring-2 ring-offset-2 ring-gray-400' : 'hover:scale-110'}`} />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-brand-dark mb-1.5">Notater</label>
-                <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} className={`${inp} resize-none`} />
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.active} onChange={e => set('active', e.target.checked)} className="rounded" />
-                <span className="text-sm text-gray-700">Aktiv</span>
-              </label>
-            </>
-          )}
-        </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-          {editing
-            ? <button onClick={handleDelete} disabled={saving} className="flex items-center gap-1.5 text-red-500 hover:text-red-700 text-sm font-semibold"><Trash2 size={14} /> Slett</button>
-            : <span />
-          }
-          <div className="flex gap-3">
-            <button onClick={() => close(onClose)} className="px-4 py-2 text-sm text-gray-500">Avbryt</button>
-            <button onClick={handleSave} disabled={saving || !canSave}
-              className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
-              {saving ? 'Lagrer…' : editing ? 'Oppdater' : 'Legg til og send SMS'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    </>
-  )
-}
-
 // ── Month Gantt view ──────────────────────────────────────────────────────────
 const DAY_W = 38
 
@@ -1108,7 +760,7 @@ function MonthGantt({ buses, assignments, year, month, onCellClick, onAssignment
         <tbody>
           {buses.length === 0 && (
             <tr><td colSpan={days + 1} className="text-center py-16 text-gray-400 text-sm">
-              Ingen busser registrert ennå. Legg til busser under <strong>Busser</strong>-fanen.
+              Ingen busser registrert ennå. Legg til busser under <strong>Oppsett → Busser</strong>.
             </td></tr>
           )}
           {buses.map((bus, bi) => {
@@ -1241,7 +893,7 @@ function DayView({ buses, assignments, date, onSlotClick, onAssignmentClick }) {
 
           {buses.length === 0 && (
             <div className="py-16 text-center text-gray-400 text-sm">
-              Ingen busser registrert. Legg til busser under <strong>Busser</strong>-fanen.
+              Ingen busser registrert. Legg til busser under <strong>Oppsett → Busser</strong>.
             </div>
           )}
 
@@ -1334,181 +986,9 @@ function DayView({ buses, assignments, date, onSlotClick, onAssignmentClick }) {
 }
 
 
-// ── Drivers management tab ────────────────────────────────────────────────────
-function DriversTab({ drivers, onAdd, onEdit }) {
-  const [search, setSearch] = useState('')
-  const filtered = drivers.filter(d => {
-    const q = search.toLowerCase()
-    return !q || d.fullName.toLowerCase().includes(q) || d.phone?.includes(q) || d.email?.toLowerCase().includes(q)
-  })
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Søk navn, telefon eller e-post…"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X size={13} />
-            </button>
-          )}
-        </div>
-        <p className="text-sm text-gray-400 whitespace-nowrap">
-          {filtered.length} av {drivers.length} sjåfører
-        </p>
-        <button onClick={onAdd}
-          className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold px-5 py-2.5 rounded-full text-sm transition-colors">
-          <Plus size={14} /> Legg til sjåfør
-        </button>
-      </div>
-
-      {drivers.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col items-center justify-center py-20 text-gray-400">
-          <Users size={36} className="mb-3 opacity-30" />
-          <p className="font-medium">Ingen sjåfører ennå</p>
-          <p className="text-sm mt-1">Klikk «Legg til sjåfør» for å komme i gang</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col items-center justify-center py-16 text-gray-400">
-          <p className="font-medium">Ingen treff for «{search}»</p>
-          <button onClick={() => setSearch('')} className="text-sm text-brand-blue hover:underline mt-2">Nullstill søk</button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Navn</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Telefon</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">E-post</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Rolle</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Kalender</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map(d => (
-                <tr key={d.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ backgroundColor: d.color }}>
-                        {(d.firstName[0] || '') + (d.lastName[0] || '')}
-                      </span>
-                      <span className={`font-semibold text-sm ${!d.active ? 'text-gray-400 line-through' : 'text-brand-dark'}`}>{d.fullName}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {d.phone ? (
-                      <a href={`tel:${d.phone}`} className="flex items-center gap-1.5 text-sm text-brand-blue hover:underline">
-                        <Phone size={12} /> {d.phone}
-                      </a>
-                    ) : <span className="text-gray-300 text-sm">—</span>}
-                  </td>
-                  <td className="px-5 py-4">
-                    {d.email ? (
-                      <a href={`mailto:${d.email}`} className="flex items-center gap-1.5 text-sm text-brand-blue hover:underline">
-                        <Mail size={12} /> {d.email}
-                      </a>
-                    ) : <span className="text-gray-300 text-sm">—</span>}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                      ${d.isAdmin ? 'bg-brand-blue/10 text-brand-blue' : 'bg-gray-100 text-gray-500'}`}>
-                      {d.isAdmin ? 'Admin' : 'Sjåfør'}
-                    </span>
-                    {d.mustChangePassword && (
-                      <span className="block text-[10px] text-amber-600 font-semibold mt-0.5">Venter på 1. innlogging</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold
-                      ${d.active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                      {d.active ? 'Aktiv' : 'Inaktiv'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="w-4 h-4 rounded-full inline-block" style={{ backgroundColor: d.color }} />
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <button onClick={() => onEdit(d)}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-brand-blue transition-colors ml-auto">
-                      <Edit2 size={13} /> Rediger
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Buses management tab ──────────────────────────────────────────────────────
-function BusesTab({ buses, setBuses, categories }) {
-  const addBus = () => {
-    setBuses(prev => [
-      ...prev,
-      { _tempId: Date.now(), name: '', registrationNumber: '', seats: 50, description: '', images: [], amenities: ['Wifi', 'Klimaanlegg', 'WC'], active: true, showOnWebsite: false, priceCategoryId: categories[0]?.id ?? null }
-    ])
-  }
-
-  return (
-    <div className="max-w-3xl space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-400">{buses.filter(b => b.active).length} av {buses.length} busser er aktive</p>
-        <button onClick={addBus}
-          className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-semibold px-4 py-2.5 rounded-full text-sm transition-colors">
-          <Plus size={15} /> Legg til buss
-        </button>
-      </div>
-
-      {categories.length === 0 && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-          Ingen priskategorier er opprettet ennå. Gå til <strong>Priskalkulator</strong> og legg til kategorier (f.eks. «Minibuss», «Stor buss») før du setter opp busser.
-        </div>
-      )}
-
-      {buses.length === 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 flex flex-col items-center justify-center py-20 text-gray-400">
-          <BusIcon size={36} className="mb-3 opacity-30" />
-          <p className="font-medium">Ingen busser registrert</p>
-          <p className="text-sm mt-1">Klikk «Legg til buss» for å komme i gang</p>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {buses.map(bus => (
-          <BusCard
-            key={bus.id ?? bus._tempId}
-            bus={bus}
-            categories={categories}
-            onSaved={updated => setBuses(prev =>
-              bus.id
-                ? prev.map(b => b.id === updated.id ? updated : b)
-                : prev.map(b => b._tempId === bus._tempId ? updated : b)
-            )}
-            onDeleted={id => setBuses(prev => prev.filter(b => b.id !== id && b._tempId !== id))}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminPlanningPage() {
   const now = new Date()
-  const [tab, setTab] = useState('calendar') // calendar | drivers | buses
   const [calView, setCalView] = useState('month') // month | day
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -1516,14 +996,12 @@ export default function AdminPlanningPage() {
   const [buses, setBuses] = useState([])
   const [drivers, setDrivers] = useState([])
   const [assignments, setAssignments] = useState([])
-  const [priceCategories, setPriceCategories] = useState([])
   const [unplannedBookings, setUnplannedBookings] = useState([])
   const [loading, setLoading] = useState(true)
 
   const [assignModal, setAssignModal] = useState(null)
   const toast = useToast()
   const [bulkPlanModal, setBulkPlanModal] = useState(null)
-  const [driverModal, setDriverModal] = useState(null)
 
   const [orderSearch, setOrderSearch] = useState('')
   const [orderSearching, setOrderSearching] = useState(false)
@@ -1534,16 +1012,14 @@ export default function AdminPlanningPage() {
   const load = useCallback(async (y, m) => {
     setLoading(true)
     try {
-      const [b, d, a, c] = await Promise.all([
+      const [b, d, a] = await Promise.all([
         api.getBuses().catch(() => []),
         api.getDrivers().catch(() => []),
         api.getAssignments(y, m + 1).catch(() => []),
-        api.getPriceCategories().catch(() => []),
       ])
       setBuses(b)
       setDrivers(d)
       setAssignments(a)
-      setPriceCategories(c)
     } catch (e) {
       console.error('Planning load error:', e)
     } finally {
@@ -1646,52 +1122,21 @@ export default function AdminPlanningPage() {
     }
   }
 
-  const handleDriverSave = (result, editing) => {
-    setDrivers(prev => editing ? prev.map(d => d.id === result.id ? result : d) : [...prev, result])
-    setDriverModal(null)
-    toast.success(editing ? 'Sjåfør oppdatert' : 'Sjåfør lagt til')
-  }
-  const handleDriverDelete = (id) => { setDrivers(prev => prev.filter(d => d.id !== id)); setDriverModal(null); toast.success('Sjåfør slettet') }
-  // Updates the list in place without closing the modal — used for in-modal actions
-  // (resend credentials, toggle admin) that show their own inline confirmation.
-  const handleDriverUpdated = (result) => setDrivers(prev => prev.map(d => d.id === result.id ? result : d))
-
-  const TABS = [
-    { id: 'calendar', label: 'Kalender', icon: CalendarDays },
-    { id: 'drivers',  label: 'Sjåfører', icon: Users },
-    { id: 'buses',    label: 'Busser',   icon: BusIcon },
-  ]
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-black text-brand-dark">Planlegger</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Kalender, sjåfører og flåteoversikt</p>
+          <p className="text-sm text-gray-400 mt-0.5">Kalender og tildeling av busser og sjåfører</p>
         </div>
-        {tab === 'calendar' && (
           <button onClick={() => setAssignModal({ initial: null })}
             className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold px-5 py-2.5 rounded-full text-sm transition-colors">
             <Plus size={15} /> Ny oppgave
           </button>
-        )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl w-fit">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
-              ${tab === id ? 'bg-white text-brand-dark shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <Icon size={15} /> {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Calendar tab */}
-      {tab === 'calendar' && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Order / reference search — finds an existing kjøreordre or an unplanned booking by reference or navn */}
           <form onSubmit={searchOrders} className="flex gap-2">
             <div className="relative flex-1 max-w-xs">
@@ -1807,19 +1252,6 @@ export default function AdminPlanningPage() {
           </div>
           </div>
         </div>
-      )}
-
-      {/* Drivers tab */}
-      {tab === 'drivers' && (
-        <DriversTab
-          drivers={drivers}
-          onAdd={() => setDriverModal({ initial: null })}
-          onEdit={(d) => setDriverModal({ initial: d })}
-        />
-      )}
-
-      {/* Buses tab */}
-      {tab === 'buses' && <BusesTab buses={buses} setBuses={setBuses} categories={priceCategories} />}
 
       {/* Modals */}
       {assignModal && (
@@ -1830,10 +1262,6 @@ export default function AdminPlanningPage() {
       {bulkPlanModal && (
         <BulkPlanModal booking={bulkPlanModal} buses={buses} drivers={drivers} assignments={assignments}
           onSaved={handleBulkSaved} onClose={closeBulkPlan} />
-      )}
-      {driverModal && (
-        <DriverModal initial={driverModal.initial}
-          onSave={handleDriverSave} onDelete={handleDriverDelete} onUpdated={handleDriverUpdated} onClose={() => setDriverModal(null)} />
       )}
     </div>
   )

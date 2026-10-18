@@ -28,6 +28,7 @@ import AdminTestimonialsPage from './pages/admin/AdminTestimonialsPage'
 import AdminOppdragPage from './pages/admin/AdminOppdragPage'
 import AdminFaqPage from './pages/admin/AdminFaqPage'
 import AdminKontaktPage from './pages/admin/AdminKontaktPage'
+import AdminDriversPage from './pages/admin/AdminDriversPage'
 import AdminSystemPage from './pages/admin/AdminSystemPage'
 import AdminPlanningPage from './pages/admin/AdminPlanningPage'
 import KontaktPage from './pages/KontaktPage'
@@ -92,6 +93,7 @@ function App() {
             <Route path="bookings/new" element={<AdminNewBookingPage />} />
             <Route path="prices" element={<AdminPricesPage />} />
             <Route path="buses" element={<AdminBusesPage />} />
+            <Route path="drivers" element={<AdminDriversPage />} />
             <Route path="partners" element={<AdminPartnersPage />} />
             <Route path="recruitment" element={<AdminRecruitmentPage />} />
             <Route path="testimonials" element={<AdminTestimonialsPage />} />
