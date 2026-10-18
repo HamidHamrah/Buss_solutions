@@ -3,6 +3,7 @@ import { useConfirm } from '../../hooks/useConfirm'
 import { useClosingTransition } from '../../hooks/useClosingTransition'
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, Upload, Loader2, RefreshCw, Search } from 'lucide-react'
 import { api } from '../../services/api'
+import { findConflicts, ConflictNotice, blockStatusClass, StatusBadge, UnplannedQueue } from '../../components/admin/PlanningParts'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 
 // ── Bus card (inline from AdminBusesPage) ────────────────────────────────────
@@ -216,12 +217,23 @@ function estimateEndTime(startTime, oneWayKm) {
 }
 
 // ── Assignment modal ──────────────────────────────────────────────────────────
+function firstFreeBus(buses, assignments, booking) {
+  if (!booking) return buses[0]?.externalId ?? ''
+  const base = {
+    startDate: (booking.departureDate || '').slice(0, 10),
+    endDate: (booking.returnDate || booking.departureDate || '').slice(0, 10),
+    startTime: booking.departureTime, endTime: booking.returnTime || estimateEndTime(booking.departureTime, oneWayDistanceKm(booking)),
+  }
+  const free = buses.find(b => findConflicts(assignments, { ...base, busId: b.externalId }).bus.length === 0)
+  return (free ?? buses[0])?.externalId ?? ''
+}
+
 function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookings, linkedBooking, onSave, onDelete, onClose }) {
   const [confirmModal, askConfirm] = useConfirm()
   const { closing, close } = useClosingTransition()
   const editing = !!initial?.id
   const [form, setForm] = useState({
-    busId: initial?.busId ?? (buses[0]?.externalId ?? ''),
+    busId: initial?.busId ?? firstFreeBus(buses, assignments, linkedBooking),
     driverId: initial?.driverId ?? null,
     bookingId: initial?.bookingId ?? linkedBooking?.id ?? null,
     startDate: initial ? dateKey(parseDate(initial.startDate)) : linkedBooking ? (linkedBooking.departureDate || '').slice(0, 10) : dateKey(new Date()),
@@ -354,7 +366,7 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
       // Only offer the "reopen for the next bus" flow on fresh creates, not edits.
       onSave(result, editing, !editing ? pickedBooking : undefined)
     } catch (e) {
-      setError(e?.message || 'Lagring feilet')
+      setErrors(er => ({ ...er, _form: e?.message || 'Lagring feilet — bussen eller sjåføren kan være opptatt.' }))
     } finally {
       setSaving(false)
     }
@@ -375,26 +387,83 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
     ${err ? 'border-red-400 focus:ring-red-300 bg-red-50' : 'border-gray-200 focus:ring-brand-blue/30'}`
   const Err = ({ k }) => errors[k] ? <p className="text-red-500 text-xs mt-1">{errors[k]}</p> : null
 
-  const conflicts = form.busId && form.startDate && form.endDate
-    ? (assignments || []).filter(a =>
-        a.busId === form.busId &&
-        a.id !== initial?.id &&
-        a.startDate.slice(0, 10) <= form.endDate &&
-        a.endDate.slice(0, 10) >= form.startDate
-      )
+  const conflicts = findConflicts(assignments, {
+    busId: form.busId, driverId: form.driverId, startDate: form.startDate, endDate: form.endDate,
+    startTime: form.startTime, endTime: form.endTime, excludeId: initial?.id,
+  })
+  const hasConflict = conflicts.bus.length > 0 || conflicts.driver.length > 0
+  const freeBuses = conflicts.bus.length > 0
+    ? buses.filter(b => b.externalId !== form.busId && findConflicts(assignments, { ...form, busId: b.externalId, driverId: null, excludeId: initial?.id }).bus.length === 0)
     : []
+  const busyDriverIds = new Set(
+    drivers.filter(d => findConflicts(assignments, { ...form, busId: null, driverId: d.id, excludeId: initial?.id }).driver.length > 0).map(d => d.id))
 
   return (
     <>
     {confirmModal}
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 motion-reduce:transition-none ${closing ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.target === e.currentTarget && close(onClose)}>
-      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-md duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
+      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-lg duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-bold text-brand-dark">{editing ? 'Rediger oppgave' : 'Ny oppgave'}</h2>
           <button onClick={() => close(onClose)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
         <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {errors._form && <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{errors._form}</div>}
+          {/* Booking link */}
+          <div>
+            <label className="block text-xs font-semibold text-brand-dark mb-1.5">Bestilling</label>
+            {pickedBooking || (form.bookingId && form.bookingReference) ? (
+              <div className="flex items-center justify-between gap-3 bg-brand-blue/5 border border-brand-blue/20 rounded-xl px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-brand-dark font-mono truncate">{form.bookingReference}</p>
+                  {pickedBooking && (
+                    <p className="text-xs text-gray-500 truncate">
+                      {pickedBooking.contactName} · {pickedBooking.fromAddress} → {pickedBooking.toAddress}
+                    </p>
+                  )}
+                  {pickedBooking?.busCount > 1 && (
+                    <p className="text-xs text-brand-blue font-medium mt-0.5">
+                      🚌 {pickedBooking.plannedCount ?? 0}/{pickedBooking.busCount} busser planlagt — denne bestillingen trenger {pickedBooking.busCount} separate kjøreordre
+                    </p>
+                  )}
+                  {pickedBooking?.tripType === 'return' && pickedBooking?.returnDate && (
+                    <p className="text-xs text-amber-600 font-medium mt-0.5">
+                      ↩ Returtur {pickedBooking.returnDate.slice(0, 10)} — dette oppretter 2 separate kjøreordre {pickedBooking.busCount > 1 ? 'per buss' : ''}
+                    </p>
+                  )}
+                </div>
+                <button type="button" onClick={unlinkBooking} className="text-gray-400 hover:text-red-500 flex-shrink-0"><X size={15} /></button>
+              </div>
+            ) : bookingPickerOpen ? (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <input autoFocus value={bookingPickerQuery} onChange={e => setBookingPickerQuery(e.target.value)}
+                  placeholder="Søk referanse eller navn…" className="w-full px-3 py-2.5 text-sm focus:outline-none border-b border-gray-100" />
+                <div className="max-h-40 overflow-y-auto divide-y divide-gray-50">
+                  {pickerResults.length === 0 && (
+                    <p className="text-xs text-gray-400 px-3 py-3">Ingen uplanlagte bestillinger funnet.</p>
+                  )}
+                  {pickerResults.map(b => (
+                    <button key={b.id} type="button" onClick={() => linkBooking(b)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors">
+                      <p className="text-xs font-mono font-bold text-brand-dark">
+                        {b.reference}{b.busCount > 1 && <span className="ml-2 text-brand-blue">{b.plannedCount ?? 0}/{b.busCount} busser</span>}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{b.contactName} · {b.fromAddress} → {b.toAddress}</p>
+                    </button>
+                  ))}
+                </div>
+                <button type="button" onClick={() => setBookingPickerOpen(false)}
+                  className="w-full text-center text-xs text-gray-400 hover:text-gray-600 py-1.5 border-t border-gray-100">Avbryt</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setBookingPickerOpen(true)}
+                className="text-xs font-semibold text-brand-blue hover:text-brand-blue-dark">
+                + Koble til en bestilling
+              </button>
+            )}
+          </div>
+
           {/* Bus */}
           <div>
             <label className="block text-xs font-semibold text-brand-dark mb-1.5">Buss *</label>
@@ -407,16 +476,20 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
               ))}
             </select>
             <Err k="busId" />
-            {conflicts.length > 0 && (
-              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
-                <p className="text-xs font-semibold text-amber-700 mb-1">⚠ Overlapp med {conflicts.length} eksisterende oppgave{conflicts.length > 1 ? 'r' : ''}:</p>
-                {conflicts.map(c => (
-                  <p key={c.id} className="text-xs text-amber-600">
-                    {c.title || c.type} · {c.startDate.slice(0, 10)}{c.startDate !== c.endDate ? ` – ${c.endDate.slice(0, 10)}` : ''}
-                  </p>
-                ))}
-              </div>
-            )}
+            <ConflictNotice kind="bus" items={conflicts.bus}>
+              {freeBuses.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-red-700">Ledige busser:</span>
+                  {freeBuses.map(b => (
+                    <button key={b.externalId} type="button" onClick={() => set('busId', b.externalId)}
+                      className="text-xs font-semibold px-2 py-1 rounded-md bg-white border border-red-200 text-red-700 hover:bg-red-100">
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {freeBuses.length === 0 && <p className="mt-1.5 text-xs text-red-700">Ingen andre busser er ledige i dette tidsrommet.</p>}
+            </ConflictNotice>
           </div>
 
           {/* Driver */}
@@ -435,9 +508,10 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
                 ${!form.driverId ? 'border-amber-300 focus:ring-amber-200 bg-amber-50/50' : 'border-gray-200 focus:ring-brand-blue/30'}`}>
               <option value={NO_ID}>— Ingen sjåfør valgt —</option>
               {drivers.filter(d => d.active).map(d => (
-                <option key={d.id} value={d.id}>{d.fullName}{d.phone ? ` · ${d.phone}` : ''}</option>
+                <option key={d.id} value={d.id}>{d.fullName}{busyDriverIds.has(d.id) ? ' — opptatt' : d.phone ? ` · ${d.phone}` : ''}</option>
               ))}
             </select>
+            <ConflictNotice kind="driver" items={conflicts.driver} />
           </div>
 
           {/* Dates */}
@@ -493,60 +567,6 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
             <input value={form.title} onChange={e => set('title', e.target.value)} placeholder="F.eks. Skoletur til Jæren" className={inp()} />
           </div>
 
-          {/* Booking link */}
-          <div>
-            <label className="block text-xs font-semibold text-brand-dark mb-1.5">Bestilling</label>
-            {pickedBooking || (form.bookingId && form.bookingReference) ? (
-              <div className="flex items-center justify-between gap-3 bg-brand-blue/5 border border-brand-blue/20 rounded-xl px-3.5 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-brand-dark font-mono truncate">{form.bookingReference}</p>
-                  {pickedBooking && (
-                    <p className="text-xs text-gray-500 truncate">
-                      {pickedBooking.contactName} · {pickedBooking.fromAddress} → {pickedBooking.toAddress}
-                    </p>
-                  )}
-                  {pickedBooking?.busCount > 1 && (
-                    <p className="text-xs text-brand-blue font-medium mt-0.5">
-                      🚌 {pickedBooking.plannedCount ?? 0}/{pickedBooking.busCount} busser planlagt — denne bestillingen trenger {pickedBooking.busCount} separate kjøreordre
-                    </p>
-                  )}
-                  {pickedBooking?.tripType === 'return' && pickedBooking?.returnDate && (
-                    <p className="text-xs text-amber-600 font-medium mt-0.5">
-                      ↩ Returtur {pickedBooking.returnDate.slice(0, 10)} — dette oppretter 2 separate kjøreordre {pickedBooking.busCount > 1 ? 'per buss' : ''}
-                    </p>
-                  )}
-                </div>
-                <button type="button" onClick={unlinkBooking} className="text-gray-400 hover:text-red-500 flex-shrink-0"><X size={15} /></button>
-              </div>
-            ) : bookingPickerOpen ? (
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <input autoFocus value={bookingPickerQuery} onChange={e => setBookingPickerQuery(e.target.value)}
-                  placeholder="Søk referanse eller navn…" className="w-full px-3 py-2.5 text-sm focus:outline-none border-b border-gray-100" />
-                <div className="max-h-40 overflow-y-auto divide-y divide-gray-50">
-                  {pickerResults.length === 0 && (
-                    <p className="text-xs text-gray-400 px-3 py-3">Ingen uplanlagte bestillinger funnet.</p>
-                  )}
-                  {pickerResults.map(b => (
-                    <button key={b.id} type="button" onClick={() => linkBooking(b)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors">
-                      <p className="text-xs font-mono font-bold text-brand-dark">
-                        {b.reference}{b.busCount > 1 && <span className="ml-2 text-brand-blue">{b.plannedCount ?? 0}/{b.busCount} busser</span>}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">{b.contactName} · {b.fromAddress} → {b.toAddress}</p>
-                    </button>
-                  ))}
-                </div>
-                <button type="button" onClick={() => setBookingPickerOpen(false)}
-                  className="w-full text-center text-xs text-gray-400 hover:text-gray-600 py-1.5 border-t border-gray-100">Avbryt</button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => setBookingPickerOpen(true)}
-                className="text-xs font-semibold text-brand-blue hover:text-brand-blue-dark">
-                + Koble til en bestilling
-              </button>
-            )}
-          </div>
-
           {/* Notes */}
           <div>
             <label className="block text-xs font-semibold text-brand-dark mb-1.5">Notater</label>
@@ -564,7 +584,7 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
           }
           <div className="flex gap-3">
             <button onClick={() => close(onClose)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Avbryt</button>
-            <button onClick={handleSave} disabled={saving}
+            <button onClick={handleSave} disabled={saving || hasConflict} title={hasConflict ? 'Løs konflikten først' : undefined}
               className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
               {saving ? 'Lagrer…' : editing ? 'Oppdater' : 'Legg til'}
             </button>
@@ -578,7 +598,7 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
 
 // ── Bulk plan modal — for multi-bus orders (BusCount > 1). One screen to assign every
 // remaining bus + driver at once instead of repeating the single-assignment flow N times.
-function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
+function BulkPlanModal({ booking, buses, drivers, assignments, onSaved, onClose }) {
   const { closing, close } = useClosingTransition()
   const isReturn = booking.tripType === 'return' && !!booking.returnDate
   const oneWayKm = oneWayDistanceKm(booking)
@@ -674,6 +694,33 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
     setSaving(false)
     if (created.length) onSaved(created)
   }
+
+  // Conflicts per row: against loaded assignments and against the other rows in this modal
+  // (so two buses can't share a driver at the same time).
+  const rowLegs = (r) => {
+    const legs = [{ startDate: r.startDate, endDate: r.startDate, startTime: r.startTime, endTime: r.endTime }]
+    if (isReturn) {
+      const d = r.returnDate || r.startDate
+      legs.push({ startDate: d, endDate: d, startTime: r.returnStartTime, endTime: r.returnEndTime })
+    }
+    return legs
+  }
+  const rowConflicts = rows.map((r, i) => {
+    if (r.status === 'done') return { bus: [], driver: [] }
+    const others = rows.flatMap((o, j) => j === i ? [] : rowLegs(o).map((l, k) => ({
+      ...l, id: `row-${j}-${k}`, busId: o.busId, driverId: o.driverId, title: `Buss ${j + 1} i denne bestillingen`,
+    })))
+    const pool = [...(assignments || []), ...others]
+    const bus = new Map()
+    const driver = new Map()
+    for (const l of rowLegs(r)) {
+      const c = findConflicts(pool, { busId: r.busId, driverId: r.driverId, ...l })
+      c.bus.forEach(a => bus.set(a.id, a))
+      c.driver.forEach(a => driver.set(a.id, a))
+    }
+    return { bus: [...bus.values()], driver: [...driver.values()] }
+  })
+  const hasConflict = rowConflicts.some(c => c.bus.length || c.driver.length)
 
   const doneCount = rows.filter(r => r.status === 'done').length
   const allDone = rows.length > 0 && doneCount === rows.length
@@ -784,6 +831,8 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
                     onChange={e => setRow(i, { returnEndTime: e.target.value })} className={`${timeInp} disabled:opacity-60`} />
                 </div>
               )}
+              <ConflictNotice kind="bus" items={rowConflicts[i].bus} />
+              <ConflictNotice kind="driver" items={rowConflicts[i].driver} />
               {row.error && <p className="text-xs text-red-600 mt-1.5">{row.error}</p>}
             </div>
           ))}
@@ -800,7 +849,7 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
               {allDone ? 'Lukk' : 'Avbryt'}
             </button>
             {!allDone && (
-              <button onClick={saveAll} disabled={saving}
+              <button onClick={saveAll} disabled={saving || hasConflict} title={hasConflict ? 'Løs konfliktene først' : undefined}
                 className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
                 {saving ? 'Lagrer…' : `Opprett ${rows.length - doneCount} kjøreordre`}
               </button>
@@ -1100,16 +1149,19 @@ function MonthGantt({ buses, assignments, year, month, onCellClick, onAssignment
                         onClick={() => isFirst && !block && onCellClick(bus.externalId, dateKey(dt))}>
                         {block ? (
                           <button onClick={e => { e.stopPropagation(); onAssignmentClick(block) }}
-                            style={block.driverColor ? { backgroundColor: block.driverColor } : undefined}
+                            style={block.driverColor && (block.driverId || block.type !== 'trip') ? { backgroundColor: block.driverColor } : undefined}
+                            title={`${block.title || ''}${block.driverName ? ` · ${block.driverName}` : ' · Ingen sjåfør'}`}
                             className={`w-full rounded-lg flex flex-col items-start px-2 py-1 overflow-hidden text-white hover:opacity-90 transition-opacity
-                              ${block.driverColor ? '' : block.driverId ? TYPE_COLORS[block.type]?.bg : 'bg-red-500'}`}>
-                            <span className="text-xs font-semibold truncate leading-tight w-full">
-                              {block.driverName || block.title || TYPE_COLORS[block.type]?.label}
+                              ${blockStatusClass(block)} ${!block.driverId && block.type === 'trip' ? 'bg-red-500' : block.driverColor ? '' : TYPE_COLORS[block.type]?.bg}`}>
+                            <span className="flex items-center gap-1 text-xs font-semibold truncate leading-tight w-full">
+                              <StatusBadge a={block} />
+                              <span className="truncate">{block.driverName || TYPE_COLORS[block.type]?.label}</span>
                             </span>
+                            {block.title && block.span > 1 && <span className="text-[10px] opacity-90 truncate w-full leading-tight">{block.title}</span>}
                             {(block.startTime || block.endTime) && (
                               <span className="text-[10px] opacity-80">{block.startTime}{block.endTime ? `–${block.endTime}` : ''}</span>
                             )}
-                            {!block.driverId && <span className="text-[9px] opacity-70">Ingen sjåfør</span>}
+                            {!block.driverId && block.type === 'trip' && <span className="text-[9px] font-semibold">Mangler sjåfør</span>}
                           </button>
                         ) : isFirst ? (
                           <div className="w-full h-8 rounded-lg hover:bg-brand-blue/10 cursor-pointer transition-colors flex items-center justify-center group">
@@ -1246,23 +1298,24 @@ function DayView({ buses, assignments, date, onSlotClick, onAssignmentClick }) {
                       const top    = li * ROW_H + 4
                       const height = ROW_H - 8
                       const bgColor = a.driverColor || undefined
-                      const bgClass = !bgColor ? TYPE_COLORS[a.type]?.bg : ''
                       return (
                         <button key={a.id}
                           onClick={e => { e.stopPropagation(); onAssignmentClick(a) }}
-                          style={{ left, width, top, height, backgroundColor: bgColor || undefined }}
+                          style={{ left, width, top, height, backgroundColor: (a.driverId || a.type !== 'trip') ? bgColor : undefined }}
+                          title={`${a.title || ''}${a.driverName ? ` · ${a.driverName}` : ' · Ingen sjåfør'}`}
                           className={`absolute rounded-lg px-2 text-left overflow-hidden text-white z-10
-                            hover:opacity-90 active:scale-95 transition-[opacity,transform] motion-reduce:transition-none shadow-sm
-                            ${bgColor ? '' : a.driverId ? (TYPE_COLORS[a.type]?.bg || 'bg-blue-500') : 'bg-red-500'}`}>
-                          <p className="text-xs font-bold truncate leading-tight mt-0.5">
-                            {a.driverName || a.title || TYPE_COLORS[a.type]?.label}
+                            hover:opacity-90 active:scale-95 transition-[opacity,transform] motion-reduce:transition-none shadow-sm ${blockStatusClass(a)}
+                            ${!a.driverId && a.type === 'trip' ? 'bg-red-500' : bgColor ? '' : (TYPE_COLORS[a.type]?.bg || 'bg-blue-500')}`}>
+                          <p className="flex items-center gap-1 text-xs font-bold truncate leading-tight mt-0.5">
+                            <StatusBadge a={a} />
+                            <span className="truncate">{a.driverName || a.title || TYPE_COLORS[a.type]?.label}</span>
                           </p>
                           {height > 28 && (
                             <p className="text-[10px] opacity-80 leading-tight">
                               {a.startTime || '00:00'}–{a.endTime || '24:00'}
                             </p>
                           )}
-                          {!a.driverId && height > 40 && (
+                          {!a.driverId && a.type === 'trip' && height > 40 && (
                             <p className="text-[9px] opacity-70">Ingen sjåfør</p>
                           )}
                         </button>
@@ -1677,38 +1730,8 @@ export default function AdminPlanningPage() {
             </div>
           )}
 
-          {/* New/unplanned orders — surfaces bookings that don't have a kjøreordre yet */}
-          {unplannedBookings.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-              <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-3">
-                Nye bestillinger — venter på planlegging ({unplannedBookings.length})
-              </p>
-              <div className="space-y-2">
-                {unplannedBookings.map(b => (
-                  <div key={b.id} className="flex items-center justify-between gap-3 bg-white border border-amber-100 rounded-xl px-4 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-brand-dark">
-                        <span className="font-mono text-xs text-gray-400 mr-2">{b.reference}</span>{b.contactName}
-                        {b.busCount > 1 && (
-                          <span className="ml-2 inline-flex items-center text-xs font-bold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-full">
-                            {b.plannedCount ?? 0}/{b.busCount} busser
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {b.fromAddress} → {b.toAddress} · {parseDate(b.departureDate).toLocaleDateString('nb-NO')}
-                      </p>
-                    </div>
-                    <button onClick={() => handlePlanBooking(b)}
-                      className="flex-shrink-0 flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors">
-                      <Plus size={13} /> Planlegg
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] items-start">
+          <div className="space-y-4 min-w-0">
           {/* Nav bar */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* View switcher */}
@@ -1768,7 +1791,15 @@ export default function AdminPlanningPage() {
                 <span className="text-xs text-gray-500">{label}</span>
               </div>
             ))}
+            <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-red-500" />Mangler sjåfør</span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 ring-2 ring-blue-300" />Pågår</span>
+            <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 opacity-60" />Fullført</span>
             <span className="text-xs text-gray-400">· Farge følger sjåfør når valgt</span>
+          </div>
+          </div>
+          <div className="xl:sticky xl:top-4">
+            <UnplannedQueue bookings={unplannedBookings} onPlan={handlePlanBooking} />
+          </div>
           </div>
         </div>
       )}
@@ -1792,7 +1823,7 @@ export default function AdminPlanningPage() {
           onSave={handleAssignSave} onDelete={handleAssignDelete} onClose={() => setAssignModal(null)} />
       )}
       {bulkPlanModal && (
-        <BulkPlanModal booking={bulkPlanModal} buses={buses} drivers={drivers}
+        <BulkPlanModal booking={bulkPlanModal} buses={buses} drivers={drivers} assignments={assignments}
           onSaved={handleBulkSaved} onClose={closeBulkPlan} />
       )}
       {driverModal && (

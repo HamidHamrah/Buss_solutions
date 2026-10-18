@@ -160,23 +160,23 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make planning feel like a professional dispatch board.
 
-- [ ] Improve calendar readability  
+- [x] Improve calendar readability  
   Make trip blocks easier to scan by status, bus, driver, and type.  
   **Done when:** Admins can understand the day/week at a glance.
 
-- [ ] Add unplanned booking queue  
+- [x] Add unplanned booking queue  
   Show bookings that still need trips or buses assigned beside the planner.  
   **Done when:** No confirmed booking is forgotten.
 
-- [ ] Improve assignment modal  
+- [x] Improve assignment modal  
   Make bus, driver, route, dates, stops, and conflicts easier to edit.  
   **Done when:** Creating a trip from a booking is fast and low-friction.
 
-- [ ] Highlight conflicts clearly  
+- [x] Highlight conflicts clearly  
   Show when a bus or driver is unavailable and why.  
   **Done when:** Admins can resolve conflicts without trial and error.
 
-- [ ] Improve trip timeline/stops  
+- [x] Improve trip timeline/stops  
   Show pickup, stops, destination, planned times, and driver notes in a clear trip timeline.  
   **Done when:** The trip detail view is useful for both admin and driver operations.
 

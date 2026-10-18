@@ -8,6 +8,7 @@ import AddressInput from '../../components/AddressInput'
 import TripMap from '../../components/admin/TripMap'
 import { toDateTimeLocal, buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 import { printInvoice } from '../../utils/printInvoice'
+import { TripTimeline } from '../../components/admin/PlanningParts'
 import { LifecycleTimeline, PriceBreakdown, ActivityLog, Section, lifecycle } from '../../components/admin/BookingDetailParts'
 
 // ── Kjøreordre (trip planning) ─────────────────────────────────────────────────
@@ -296,6 +297,13 @@ function TripEditor({ tripId, booking, buses, drivers, onDeleted, onUpdated }) {
           traveledPath={positionHistory}
         />
       </div>
+
+      {detail.stops?.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reiseforløp</p>
+          <TripTimeline stops={detail.stops} />
+        </div>
+      )}
 
       {/* Stops itinerary */}
       <div>
