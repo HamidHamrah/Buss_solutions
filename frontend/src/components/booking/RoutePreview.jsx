@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet'
 import { MapPin } from 'lucide-react'
 
@@ -13,6 +13,29 @@ function FitBounds({ points }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, map])
   return null
+}
+
+// Polyline that draws itself from start to end whenever its geometry changes.
+function AnimatedPolyline({ positions, pathOptions }) {
+  const ref = useRef(null)
+  const key = `${positions.length}:${positions[0]}:${positions[positions.length - 1]}`
+
+  useEffect(() => {
+    const el = ref.current?.getElement?.()
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const length = el.getTotalLength?.()
+    if (!length) return
+    el.style.transition = 'none'
+    el.style.strokeDasharray = `${length}`
+    el.style.strokeDashoffset = `${length}`
+    el.getBoundingClientRect() // commit the hidden state before animating
+    el.style.transition = `stroke-dashoffset ${Math.min(1400, 500 + length / 4)}ms cubic-bezier(0.65, 0, 0.35, 1)`
+    el.style.strokeDashoffset = '0'
+    const done = setTimeout(() => { el.style.transition = ''; el.style.strokeDasharray = '' }, 1600)
+    return () => clearTimeout(done)
+  }, [key])
+
+  return <Polyline ref={ref} positions={positions} pathOptions={pathOptions} />
 }
 
 const shortName = (a) => a?.address?.split(',')[0] || ''
@@ -55,7 +78,7 @@ export default function RoutePreview({ from, to, stops = [], returnStops = [], r
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution="© OpenStreetMap contributors" />
         {backLine.length > 1 && <Polyline positions={backLine} pathOptions={{ color: '#0891b2', weight: 4, dashArray: '8 8' }} />}
-        {outLine.length > 1 && <Polyline positions={outLine} pathOptions={{ color: '#175c8e', weight: 5 }} />}
+        {outLine.length > 1 && <AnimatedPolyline positions={outLine} pathOptions={{ color: '#175c8e', weight: 5 }} />}
         {stopPoints.map((s, i) => marker([s.lat, s.lon], '#d97706', `Stopp: ${shortName(s)}`, `s${i}`))}
         {backStopPoints.map((s, i) => marker([s.lat, s.lon], '#d97706', `Retur-stopp: ${shortName(s)}`, `r${i}`))}
         {from?.lat && marker([from.lat, from.lon], '#15803d', `Fra: ${shortName(from)}`, 'from')}

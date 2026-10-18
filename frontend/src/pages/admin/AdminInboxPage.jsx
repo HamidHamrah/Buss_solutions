@@ -1,3 +1,4 @@
+import { SkeletonRows } from '../../components/Skeleton'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
@@ -37,7 +38,7 @@ export default function AdminInboxPage() {
   }, [])
 
   if (error) return <p className="text-sm text-red-600">{error}</p>
-  if (!items) return <p className="text-sm text-gray-400">Laster…</p>
+  if (!items) return <div className="max-w-4xl"><SkeletonRows rows={5} /></div>
 
   const visible = items.filter(i => matchesFilter(i, filter))
 

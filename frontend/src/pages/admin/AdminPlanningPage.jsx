@@ -3,6 +3,7 @@ import { useConfirm } from '../../hooks/useConfirm'
 import { useClosingTransition } from '../../hooks/useClosingTransition'
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, Upload, Loader2, RefreshCw, Search } from 'lucide-react'
 import { api } from '../../services/api'
+import { useToast } from '../../contexts/ToastContext'
 import { findConflicts, ConflictNotice, blockStatusClass, StatusBadge, UnplannedQueue } from '../../components/admin/PlanningParts'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 
@@ -1520,6 +1521,7 @@ export default function AdminPlanningPage() {
   const [loading, setLoading] = useState(true)
 
   const [assignModal, setAssignModal] = useState(null)
+  const toast = useToast()
   const [bulkPlanModal, setBulkPlanModal] = useState(null)
   const [driverModal, setDriverModal] = useState(null)
 
@@ -1596,6 +1598,7 @@ export default function AdminPlanningPage() {
 
   const handleBulkSaved = (created) => {
     setAssignments(prev => [...prev, ...created])
+    toast.success(`${created.length} kjøreordre opprettet`)
     loadUnplanned()
   }
   const closeBulkPlan = () => { setBulkPlanModal(null); loadUnplanned() }
@@ -1604,6 +1607,7 @@ export default function AdminPlanningPage() {
     setAssignments(prev => editing ? prev.map(a => a.id === result.id ? result : a) : [...prev, result])
     setAssignModal(null)
     setOrderSearchResult(null)
+    toast.success(editing ? 'Kjøreordre oppdatert' : 'Kjøreordre opprettet')
     if (!result.bookingId) return
     // Re-fetch rather than assume this booking is fully planned — a multi-bus order (BusCount
     // > 1) needs one kjøreordre per bus, so it can still have buses left after this save.
@@ -1613,7 +1617,7 @@ export default function AdminPlanningPage() {
       if (stillNeeded) setAssignModal({ initial: null, linkedBooking: stillNeeded })
     }
   }
-  const handleAssignDelete = (id) => { setAssignments(prev => prev.filter(a => a.id !== id)); setAssignModal(null) }
+  const handleAssignDelete = (id) => { setAssignments(prev => prev.filter(a => a.id !== id)); setAssignModal(null); toast.success('Kjøreordre slettet') }
 
   const searchOrders = async (e) => {
     e.preventDefault()
@@ -1645,8 +1649,9 @@ export default function AdminPlanningPage() {
   const handleDriverSave = (result, editing) => {
     setDrivers(prev => editing ? prev.map(d => d.id === result.id ? result : d) : [...prev, result])
     setDriverModal(null)
+    toast.success(editing ? 'Sjåfør oppdatert' : 'Sjåfør lagt til')
   }
-  const handleDriverDelete = (id) => { setDrivers(prev => prev.filter(d => d.id !== id)); setDriverModal(null) }
+  const handleDriverDelete = (id) => { setDrivers(prev => prev.filter(d => d.id !== id)); setDriverModal(null); toast.success('Sjåfør slettet') }
   // Updates the list in place without closing the modal — used for in-modal actions
   // (resend credentials, toggle admin) that show their own inline confirmation.
   const handleDriverUpdated = (result) => setDrivers(prev => prev.map(d => d.id === result.id ? result : d))

@@ -5,6 +5,8 @@ import { api } from '../../services/api'
 import { useConfig } from '../../contexts/ConfigContext'
 import { printInvoice } from '../../utils/printInvoice'
 import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../contexts/ToastContext'
+import { SkeletonTable } from '../../components/Skeleton'
 import InvoicePreviewModal from '../../components/admin/InvoicePreviewModal'
 
 const fmtKr = (n) => (n ?? 0).toLocaleString('nb-NO') + ' kr'
@@ -46,6 +48,9 @@ export default function AdminInvoicesPage() {
     phone: config?.content?.phone || '',
   }
   const [confirmModal, askConfirm] = useConfirm()
+  const toast = useToast()
+  const [flashId, setFlashId] = useState(null)
+  const flash = (id) => { setFlashId(id); setTimeout(() => setFlashId(null), 900) }
   const [preview, setPreview] = useState(null)
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -81,7 +86,9 @@ export default function AdminInvoicesPage() {
     try {
       await api.updatePaymentStatus(inv.id, inv.paymentStatus === 1 ? 0 : 1)
       load()
-    } catch {}
+      flash(inv.id)
+      toast.success(markingPaid ? `Faktura ${inv.invoiceNumber} markert som betalt` : 'Betaling tilbakestilt')
+    } catch (e) { toast.error(e?.message || 'Kunne ikke oppdatere betaling.') }
     setUpdating(null)
   }
 
@@ -100,6 +107,8 @@ export default function AdminInvoicesPage() {
     try {
       await api.generateInvoice(inv.id)
       load()
+      flash(inv.id)
+      toast.success('Faktura opprettet')
     } catch (e) {
       setActionError({ id: inv.id, message: e?.message || 'Kunne ikke generere faktura.' })
     }
@@ -118,7 +127,7 @@ export default function AdminInvoicesPage() {
     <div>
       {confirmModal}
       {all.find(i => i.id === preview) && (
-        <InvoicePreviewModal inv={all.find(i => i.id === preview)} onClose={() => setPreview(null)} onSent={load} />
+        <InvoicePreviewModal inv={all.find(i => i.id === preview)} onClose={() => setPreview(null)} onSent={() => { load(); flash(preview); toast.success('Faktura sendt til kunden') }} />
       )}
       <h1 className="text-xl font-bold text-brand-dark mb-1">Fakturaer</h1>
       <p className="text-sm text-gray-400 mb-6">Planlegging, fakturastatus og betaling — samlet oversikt.</p>
@@ -171,7 +180,7 @@ export default function AdminInvoicesPage() {
               const inv_ = INVOICE_STATUS[inv.invoiceStatus] ?? INVOICE_STATUS.none
               const busy = actionLoading === inv.id
               return (
-                <tr key={inv.id} className="border-t border-gray-100 hover:bg-gray-50 align-top">
+                <tr key={inv.id} className={`border-t border-gray-100 hover:bg-gray-50 align-top ${flashId === inv.id ? 'status-flash' : ''}`}>
                   <td className="px-5 py-3">
                     <p className="font-semibold text-brand-dark">{inv.orgName || inv.contactName}</p>
                     <Link to={`/admin/bookings?ref=${inv.reference}`} className="text-xs font-mono text-gray-400 hover:text-brand-blue">#{inv.reference}</Link>
@@ -255,6 +264,7 @@ export default function AdminInvoicesPage() {
                 </tr>
               )
             })}
+            {loading && all.length === 0 && <SkeletonTable rows={6} cols={7} />}
             {!loading && invoices.length === 0 && (
               <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">{all.length ? 'Ingen fakturaer i dette filteret.' : 'Ingen bestillinger funnet.'}</td></tr>
             )}

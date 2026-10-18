@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../services/api'
 import { useConfig } from '../../contexts/ConfigContext'
 import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../contexts/ToastContext'
+import { SkeletonRows } from '../../components/Skeleton'
 import { CheckCircle, XCircle, Clock, ChevronDown, ChevronUp, Phone, Mail, Building, Search, Archive, Inbox, SendHorizontal, Printer, X, Square, CheckSquare, Download, Loader2, Bus as BusIcon, User, Plus, Trash2, ArrowUp, ArrowDown, MessageSquare, PlayCircle } from 'lucide-react'
 import AddressInput from '../../components/AddressInput'
 import TripMap from '../../components/admin/TripMap'
@@ -504,6 +506,14 @@ const STATUS_COLORS = {
 
 function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccountNumber = '', company = {}, selectable = false, selected = false, onToggleSelect, defaultOpen = false, autoExpandTripId }) {
   const [confirmModal, askConfirm] = useConfirm()
+  const toast = useToast()
+  const [flashing, setFlashing] = useState(false)
+  // Confirms a successful status change: toast + brief green pulse on the card.
+  const celebrate = (message) => {
+    toast.success(message)
+    setFlashing(true)
+    setTimeout(() => setFlashing(false), 900)
+  }
   const [open, setOpen] = useState(defaultOpen)
   const [updating, setUpdating] = useState(false)
   const [notes, setNotes] = useState(booking.adminNotes || '')
@@ -537,7 +547,8 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       const res = await api.generateInvoice(booking.id)
       setInvoiceNumber(res.invoiceNumber)
       setInvoiceDate(res.invoiceDate)
-    } catch {}
+      celebrate(`Faktura ${res.invoiceNumber} opprettet`)
+    } catch (e) { toast.error(e?.message || 'Kunne ikke generere faktura.') }
     setGeneratingInvoice(false)
   }
 
@@ -554,8 +565,10 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
     try {
       const res = await api.sendInvoice(booking.id)
       setInvoiceSentAt(res.sentAt)
+      celebrate('Faktura sendt til kunden')
     } catch (e) {
       setSendError(e?.message || 'Kunne ikke sende faktura.')
+      toast.error(e?.message || 'Kunne ikke sende faktura.')
     }
     setSendingInvoice(false)
   }
@@ -566,7 +579,8 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       const next = paymentStatus === 1 ? 0 : 1
       await api.updatePaymentStatus(booking.id, next)
       setPaymentStatus(next)
-    } catch {}
+      celebrate(next === 1 ? 'Markert som betalt' : 'Betaling tilbakestilt')
+    } catch (e) { toast.error(e?.message || 'Kunne ikke oppdatere betaling.') }
     setUpdatingPayment(false)
   }
 
@@ -575,7 +589,8 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
     try {
       const updated = await api.updateBookingStatus(booking.id, status)
       onStatusChange(booking.id, status, updated.invoiceNumber, updated.invoiceDate)
-    } catch {}
+      celebrate(`Status: ${STATUS_LABELS[status]}`)
+    } catch (e) { toast.error(e?.message || 'Kunne ikke endre status.') }
     setUpdating(false)
   }
 
@@ -592,7 +607,8 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       onStatusChange(booking.id, 2)
       setCancelling(false)
       setCancelReason('')
-    } catch {}
+      toast.success('Bestillingen er avlyst')
+    } catch (e) { toast.error(e?.message || 'Kunne ikke avlyse bestillingen.') }
     setUpdating(false)
   }
 
@@ -604,7 +620,8 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       setTotal(res.estimatedTotal)
       setPriceSaved(true)
       setTimeout(() => setPriceSaved(false), 2000)
-    } catch {}
+      toast.success('Pris oppdatert')
+    } catch (e) { toast.error(e?.message || 'Kunne ikke lagre pris.') }
     setSavingPrice(false)
   }
 
@@ -643,7 +660,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       await api.updateBookingNotes(booking.id, notes)
       setNotesSaved(true)
       setTimeout(() => setNotesSaved(false), 2000)
-    } catch {}
+    } catch (e) { toast.error(e?.message || 'Kunne ikke lagre notater.') }
     setSavingNotes(false)
   }
 
@@ -667,7 +684,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
   })()
 
   return (
-    <div className={`bg-white border rounded-2xl overflow-hidden transition-colors ${selected ? 'border-brand-blue ring-1 ring-brand-blue/20' : 'border-gray-200'}`}>
+    <div className={`bg-white border rounded-2xl overflow-hidden transition-colors ${flashing ? 'status-flash ' : ''}${selected ? 'border-brand-blue ring-1 ring-brand-blue/20' : 'border-gray-200'}`}>
       {confirmModal}
       <div className="flex items-center gap-3 px-5 py-4">
         {selectable && (
@@ -696,7 +713,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       </div>
 
       {open && (
-        <div className="border-t border-gray-100 px-5 py-5 space-y-6">
+        <div className="animate-in fade-in slide-in-from-top-2 border-t border-gray-100 px-5 py-5 space-y-6">
           <div className="space-y-4">
             <LifecycleTimeline booking={booking} steps={life.steps} />
             {nextAction && (
@@ -1499,7 +1516,7 @@ export default function AdminBookingsPage() {
         </button>
       </div>
 
-      {loading && <div className="text-center py-16 text-gray-400">Laster bestillinger…</div>}
+      {loading && <SkeletonRows rows={6} />}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-5 py-4 text-sm flex items-center justify-between gap-4">
           <span>{error}</span>

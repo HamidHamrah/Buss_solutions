@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ConfigProvider } from './contexts/ConfigContext'
+import { ToastProvider } from './contexts/ToastContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import AdminLayout from './components/AdminLayout'
@@ -47,6 +48,7 @@ function App() {
   return (
     <ErrorBoundary>
     <ConfigProvider>
+    <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
@@ -101,6 +103,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
+    </ToastProvider>
     </ConfigProvider>
     </ErrorBoundary>
   )

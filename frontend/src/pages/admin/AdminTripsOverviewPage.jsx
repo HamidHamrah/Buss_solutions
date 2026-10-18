@@ -1,3 +1,4 @@
+import { SkeletonTable } from '../../components/Skeleton'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Calendar, Phone, User, Copy, Check } from 'lucide-react'
@@ -264,11 +265,7 @@ export default function AdminTripsOverviewPage() {
               </tr>
             )}
             {loading && (
-              <tr>
-                <td colSpan={11} className="px-5 py-12 text-center">
-                  <div className="inline-block w-5 h-5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
-                </td>
-              </tr>
+              <SkeletonTable rows={6} cols={11} />
             )}
           </tbody>
         </table>

@@ -574,7 +574,8 @@ export default function BookingPage() {
     return false
   }
 
-  const goTo = (i) => { setStep(i); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const direction = useRef('forward')
+  const goTo = (i) => { direction.current = i < step ? 'back' : 'forward'; setStep(i); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -659,13 +660,15 @@ export default function BookingPage() {
                 <ChevronLeft size={14} /> {step === 0 ? 'Tilbake til forsiden' : 'Tilbake'}
               </button>
 
-              {step === 0 && <RouteStep state={state} setState={setState} auto={auto} km={km} />}
-              {step === 1 && <WhenStep state={state} setState={setState} />}
-              {step === 2 && <BusStep state={state} setState={setState} categories={categories} recommended={recommended} priceFor={priceForCategory} />}
-              {step === 3 && (
-                <ReviewStep state={state} setState={setState} auto={auto} km={km} category={category} price={price}
-                  content={content} onEdit={goTo} onSubmit={handleSubmit} submitting={submitting} submitError={submitError} />
-              )}
+              <div key={step} className={`animate-in fade-in ${direction.current === 'back' ? 'slide-in-from-left-4' : 'slide-in-from-right-4'}`}>
+                {step === 0 && <RouteStep state={state} setState={setState} auto={auto} km={km} />}
+                {step === 1 && <WhenStep state={state} setState={setState} />}
+                {step === 2 && <BusStep state={state} setState={setState} categories={categories} recommended={recommended} priceFor={priceForCategory} />}
+                {step === 3 && (
+                  <ReviewStep state={state} setState={setState} auto={auto} km={km} category={category} price={price}
+                    content={content} onEdit={goTo} onSubmit={handleSubmit} submitting={submitting} submitError={submitError} />
+                )}
+              </div>
 
               {step < 3 && (
                 <div className={`flex justify-end mt-8 ${price ? 'hidden lg:flex' : ''}`}>
