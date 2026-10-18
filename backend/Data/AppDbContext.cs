@@ -23,10 +23,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BusPositionPing> BusPositionPings => Set<BusPositionPing>();
     public DbSet<BookingActivity> BookingActivities => Set<BookingActivity>();
     public DbSet<UploadedAsset> UploadedAssets => Set<UploadedAsset>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<EmailOutbox> EmailOutbox => Set<EmailOutbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var jsonOptions = new JsonSerializerOptions();
+
+        modelBuilder.Entity<AuditLog>(e =>
+        {
+            e.Property(a => a.Summary).HasMaxLength(1600);
+            e.HasIndex(a => a.CreatedAt);
+            e.HasIndex(a => new { a.EntityType, a.EntityId });
+        });
+        modelBuilder.Entity<EmailOutbox>(e =>
+        {
+            e.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        });
 
         modelBuilder.Entity<BookingActivity>()
             .HasOne(a => a.Booking).WithMany().HasForeignKey(a => a.BookingId).OnDelete(DeleteBehavior.Cascade);

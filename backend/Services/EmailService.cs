@@ -1,6 +1,7 @@
 using MailKit.Net.Smtp;
 using MimeKit;
 using BusSolutionApi.Data;
+using BusSolutionApi.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusSolutionApi.Services;
@@ -329,44 +330,30 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             cfg?.SiteDomain ?? "");
     }
 
-    private async Task<EmailSettings> ResolveSettingsAsync()
+    // Queues the message in the outbox; EmailOutboxWorker delivers it and retries on failure.
+    private async Task SendAsync(MimeMessage message)
     {
-        if (!string.IsNullOrWhiteSpace(settings.Host)) return settings;
-
-        var cfg = await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync();
-        if (cfg == null || string.IsNullOrWhiteSpace(cfg.SmtpHost)) return settings;
-
-        return new EmailSettings
+        using var buffer = new MemoryStream();
+        await message.WriteToAsync(buffer);
+        db.EmailOutbox.Add(new EmailOutbox
         {
-            Host = cfg.SmtpHost,
-            Port = cfg.SmtpPort,
-            Username = cfg.SmtpUsername,
-            Password = cfg.SmtpPassword,
-            FromAddress = cfg.SmtpFromAddress,
-            FromName = cfg.CompanyName,
-            NotifyTo = cfg.SmtpNotifyTo,
-        };
+            ToAddress = string.Join(", ", message.To.Mailboxes.Select(m => m.Address)),
+            Subject = message.Subject ?? "",
+            RawMessage = System.Text.Encoding.UTF8.GetString(buffer.ToArray()),
+        });
+        await db.SaveChangesAsync();
+        logger.LogInformation("Email queued: {Subject}", message.Subject);
     }
 
-    private async Task SendAsync(MimeMessage message, EmailSettings? resolved = null)
+    // Sends immediately and surfaces SMTP errors — only for the admin "send test email" action.
+    public async Task SendTestAsync(string toEmail)
     {
-        var s = resolved ?? await ResolveSettingsAsync();
-        if (string.IsNullOrWhiteSpace(s.Host))
-        {
-            logger.LogWarning("SMTP not configured — email not sent: {Subject}", message.Subject);
-            return;
-        }
-        try
-        {
-            using var client = new SmtpClient();
-            await client.ConnectAsync(s.Host, s.Port, MailKit.Security.SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(s.Username, s.Password);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to send email");
-        }
+        var company = await GetCompanyInfoAsync();
+        var msg = new MimeMessage();
+        msg.From.Add(new MailboxAddress(company.Name, settings.FromAddress));
+        msg.To.Add(new MailboxAddress("Admin", toEmail));
+        msg.Subject = $"Test e-post fra {company.Name}";
+        msg.Body = new TextPart("html") { Text = Wrap(P("E-postoppsettet fungerer."), company, "Test") };
+        await new EmailDelivery(settings, db).DeliverAsync(msg);
     }
 }

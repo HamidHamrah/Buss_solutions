@@ -44,6 +44,11 @@ export const api = {
   updateConfig: (data) => request('/api/config', { method: 'PUT', body: JSON.stringify(data) }),
   sendTestEmail: () => request('/api/config/test-email', { method: 'POST' }),
   changePassword: (newPassword) => request('/api/config/password', { method: 'PUT', body: JSON.stringify({ newPassword }) }),
+  // System
+  getSystemStatus: () => request('/api/admin/system/status'),
+  getSystemEmails: (status) => request(`/api/admin/system/emails${status ? `?status=${status}` : ''}`),
+  retrySystemEmail: (id) => request(`/api/admin/system/emails/${id}/retry`, { method: 'POST' }),
+  getAuditLog: (take = 100) => request(`/api/admin/system/audit?take=${take}`),
   // Drivers
   getDrivers: () => request('/api/drivers'),
   createDriver: (data) => request('/api/drivers', { method: 'POST', body: JSON.stringify(data) }),

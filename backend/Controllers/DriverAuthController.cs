@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using BusSolutionApi.Data;
+using BusSolutionApi.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -11,15 +13,28 @@ namespace BusSolutionApi.Controllers;
 
 [ApiController]
 [Route("api/driver")]
-public class DriverAuthController(AppDbContext db, IConfiguration config) : ControllerBase
+public class DriverAuthController(AppDbContext db, IConfiguration config, LoginThrottle throttle, AuditService audit) : ControllerBase
 {
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] DriverLoginRequest req)
     {
         var phone = req.Phone?.Trim() ?? "";
+        var key = $"driver:{phone}:{HttpContext.Connection.RemoteIpAddress}";
+        if (throttle.RemainingLockout(key) is { } left)
+        {
+            Response.Headers.RetryAfter = ((int)left.TotalSeconds).ToString();
+            return StatusCode(429, new { message = $"For mange mislykkede forsøk. Prøv igjen om {(int)Math.Ceiling(left.TotalMinutes)} minutter." });
+        }
+
         var driver = await db.Drivers.FirstOrDefaultAsync(d => d.Phone == phone);
         if (driver == null || !driver.Active || !BCrypt.Net.BCrypt.Verify(req.Password, driver.PasswordHash))
+        {
+            throttle.RecordFailure(key);
+            await audit.RecordAsync("login_failed", "Driver", null, $"Mislykket sjåfør-innlogging ({phone})", "Anonym");
             return Unauthorized(new { message = "Feil telefonnummer eller passord" });
+        }
+        throttle.RecordSuccess(key);
 
         driver.LastLoginAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

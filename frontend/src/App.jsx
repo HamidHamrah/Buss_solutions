@@ -28,6 +28,7 @@ import AdminTestimonialsPage from './pages/admin/AdminTestimonialsPage'
 import AdminOppdragPage from './pages/admin/AdminOppdragPage'
 import AdminFaqPage from './pages/admin/AdminFaqPage'
 import AdminKontaktPage from './pages/admin/AdminKontaktPage'
+import AdminSystemPage from './pages/admin/AdminSystemPage'
 import AdminPlanningPage from './pages/admin/AdminPlanningPage'
 import KontaktPage from './pages/KontaktPage'
 import DriverApplicationPage from './pages/DriverApplicationPage'
@@ -98,6 +99,7 @@ function App() {
             <Route path="faq" element={<AdminFaqPage />} />
             <Route path="kontakt" element={<AdminKontaktPage />} />
             <Route path="planning" element={<AdminPlanningPage />} />
+            <Route path="system" element={<AdminSystemPage />} />
             <Route path="content" element={<AdminContentPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />

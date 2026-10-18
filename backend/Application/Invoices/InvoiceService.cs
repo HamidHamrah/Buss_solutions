@@ -93,7 +93,7 @@ public class InvoiceService(AppDbContext db, FikenService fiken)
 
         var claimed = 0;
         string invoiceNumber = "";
-        for (var attempt = 0; attempt < 5 && claimed == 0; attempt++)
+        for (var attempt = 0; attempt < 10 && claimed == 0; attempt++)
         {
             var countThisYear = await db.Bookings
                 .CountAsync(b => b.InvoiceNumber != null && b.InvoiceDate.HasValue && b.InvoiceDate.Value.Year == year);
@@ -108,8 +108,10 @@ public class InvoiceService(AppDbContext db, FikenService fiken)
                         .SetProperty(b => b.InvoiceDate, invoiceDate)
                         .SetProperty(b => b.UpdatedAt, DateTime.UtcNow));
             }
-            catch (DbUpdateException) when (attempt < 4)
+            catch (Exception ex) when (attempt < 9 && (ex is DbUpdateException || ex is Npgsql.PostgresException { SqlState: "23505" }))
             {
+                // Another request took this number first; wait a moment so retries don't collide again.
+                await Task.Delay(Random.Shared.Next(5, 40));
             }
         }
         if (claimed == 0) return;

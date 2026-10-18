@@ -8,7 +8,7 @@ export function calcPrice(pricing, km, time, tripType, busOnStay, bus = null) {
   const effectivePricing = cat
     ? { ...pricing, kmRate: cat.kmRate, hourRate: cat.hourRate }
     : pricing
-  return calcTripPrice(effectivePricing, { km, departureTime: time, tripType, busOnStay })
+  return calcTripPrice(effectivePricing, { km: tripType === 'return' ? Math.round(km / 2) : km, departureTime: time, tripType, busOnStay })
 }
 
 export function fmtKr(n) {

@@ -561,7 +561,7 @@ export default function BookingPage() {
   const category = categories.find(c => c.id === state.selectedCategory) || null
   const priceForCategory = (cat) => km
     ? calcTripPrice({ ...pricing, kmRate: cat.kmRate, hourRate: cat.hourRate },
-      { km, departureTime: state.time, tripType: state.tripType, busOnStay: state.busOnStay })
+      { km: state.tripType === 'return' ? Math.round(km / 2) : km, departureTime: state.time, tripType: state.tripType, busOnStay: state.busOnStay })
     : null
   const perBus = category ? priceForCategory(category) : null
   const busCount = state.busCount || 1

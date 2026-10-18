@@ -21,8 +21,8 @@ public class ContactController(AppDbContext db, EmailService email) : Controller
         };
         db.ContactMessages.Add(msg);
         await db.SaveChangesAsync();
-        _ = email.SendContactNotificationAsync(msg.Name, msg.Email, msg.Phone, msg.Subject, msg.Message);
-        _ = email.SendContactConfirmationAsync(msg.Email, msg.Name, msg.Subject);
+        await email.SendContactNotificationAsync(msg.Name, msg.Email, msg.Phone, msg.Subject, msg.Message);
+        await email.SendContactConfirmationAsync(msg.Email, msg.Name, msg.Subject);
         return Ok(new { id = msg.Id });
     }
 
@@ -59,7 +59,7 @@ public class ContactController(AppDbContext db, EmailService email) : Controller
         msg.Status = ContactStatus.Replied;
         msg.RepliedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
-        _ = email.SendContactReplyAsync(msg.Email, msg.Name, msg.Subject, req.ReplyText);
+        await email.SendContactReplyAsync(msg.Email, msg.Name, msg.Subject, req.ReplyText);
         return Ok(msg);
     }
 

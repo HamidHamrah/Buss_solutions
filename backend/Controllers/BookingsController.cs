@@ -13,7 +13,7 @@ public class BookingsController(BookingService bookings, BookingQueries queries,
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("booking")]
     public async Task<IActionResult> Create([FromBody] CreateBookingRequest req)
     {
-        var (booking, error, statusCode) = await bookings.CreateAsync(req);
+        var (booking, error, statusCode) = await bookings.CreateAsync(req, trustedPrice: User.IsInRole("Admin"));
         if (error != null)
             return statusCode == 409 ? Conflict(new { error }) : BadRequest(new { error });
 

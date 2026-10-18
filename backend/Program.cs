@@ -6,6 +6,7 @@ using BusSolutionApi.Application.Bookings;
 using BusSolutionApi.Application.Invoices;
 using BusSolutionApi.Application.Planning;
 using BusSolutionApi.Data;
+using BusSolutionApi.Infrastructure;
 using BusSolutionApi.Services;
 using Npgsql;
 using System.Text;
@@ -49,8 +50,12 @@ var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt__Key is not set.");
 
 // Database
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connStr));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<AuditSaveChangesInterceptor>();
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
+    options.UseNpgsql(connStr).AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddSingleton<LoginThrottle>();
 
 // JWT Auth
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -78,6 +83,9 @@ builder.Services.AddAuthorization(options =>
 var emailSettings = builder.Configuration.GetSection("Email").Get<EmailSettings>() ?? new EmailSettings();
 builder.Services.AddSingleton(emailSettings);
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<EmailDelivery>();
+builder.Services.AddScoped<AlertService>();
+builder.Services.AddHostedService<EmailOutboxWorker>();
 
 // SMS (driver credential delivery)
 var twilioSettings = builder.Configuration.GetSection("Twilio").Get<TwilioSettings>() ?? new TwilioSettings();
@@ -127,6 +135,14 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0,
             }));
+    options.AddPolicy("upload", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     options.RejectionStatusCode = 429;
 });
 
@@ -146,12 +162,19 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<ExceptionAlertMiddleware>();
 app.UseCors();
 app.UseRateLimiter();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+// Liveness: the process is up. Readiness (dependencies) is /health/ready.
 app.MapGet("/health", () => Results.Ok(new { status = "ok", utc = DateTime.UtcNow }));
+app.MapGet("/health/ready", async (AppDbContext db, EmailDelivery email) =>
+{
+    var report = await SystemStatus.BuildAsync(db, email);
+    return Results.Json(report, statusCode: report.Status == "unhealthy" ? 503 : 200);
+});
 
 app.Run();

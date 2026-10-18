@@ -9,9 +9,10 @@ public class BookingService(
     AppDbContext db,
     EmailService email,
     BookingReferenceGenerator referenceGenerator,
-    BookingPricingService pricing)
+    BookingPricingService pricing,
+    ILogger<BookingService> logger)
 {
-    public async Task<(Booking? Booking, string? Error, int? StatusCode)> CreateAsync(CreateBookingRequest req)
+    public async Task<(Booking? Booking, string? Error, int? StatusCode)> CreateAsync(CreateBookingRequest req, bool trustedPrice = false)
     {
         var validationError = ValidateCreateRequest(req);
         if (validationError != null) return (null, validationError, 400);
@@ -56,21 +57,43 @@ public class BookingService(
             OrgNumber = req.OrgNumber,
             Message = req.Message
         };
-        pricing.ApplyClientEstimate(booking, req);
+        if (trustedPrice)
+        {
+            pricing.ApplyClientEstimate(booking, req);
+        }
+        else
+        {
+            var cfg = await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync();
+            var category = cfg == null ? null : await db.PriceCategories.FirstOrDefaultAsync(c => c.Name == req.BusName);
+            if (cfg == null) return (null, "Systemet er ikke ferdig satt opp.", 500);
+            var (priceError, client) = pricing.ApplyServerEstimate(booking, req, cfg, category);
+            if (priceError != null) return (null, priceError, 400);
+            if (Math.Abs(client!.Total - booking.EstimatedTotal) > 1)
+                logger.LogWarning("Booking price differs from the browser's estimate: server {Server} vs client {Client} (bus {Bus}, {Km} km)",
+                    booking.EstimatedTotal, client.Total, req.BusName, req.DistanceKm);
+        }
 
         db.Bookings.Add(booking);
         db.BookingActivities.Add(new BookingActivity { Booking = booking, Type = "created", Message = "Forespørsel mottatt" });
         await db.SaveChangesAsync();
 
-        var vatPct = (await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync())?.VatPercent ?? 12;
-        _ = email.SendBookingConfirmationAsync(booking.ContactEmail, booking.ContactName, booking.Reference,
-            booking.FromAddress, booking.ToAddress, booking.DepartureDate, booking.BusName, booking.EstimatedTotal,
-            booking.TripType, booking.ReturnDate, booking.Stops,
-            booking.NeedsTrailer, booking.NeedsWheelchair, booking.SelectedExtras,
-            booking.Passengers, vatPct);
-        _ = email.SendBookingNotificationAsync(booking.Reference, booking.ContactName, booking.ContactEmail,
-            booking.ContactPhone, booking.FromAddress, booking.ToAddress, booking.DepartureDate,
-            booking.BusName, booking.EstimatedTotal);
+        try
+        {
+            var vatPct = (await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync())?.VatPercent ?? 12;
+            await email.SendBookingConfirmationAsync(booking.ContactEmail, booking.ContactName, booking.Reference,
+                booking.FromAddress, booking.ToAddress, booking.DepartureDate, booking.BusName, booking.EstimatedTotal,
+                booking.TripType, booking.ReturnDate, booking.Stops,
+                booking.NeedsTrailer, booking.NeedsWheelchair, booking.SelectedExtras,
+                booking.Passengers, vatPct);
+            await email.SendBookingNotificationAsync(booking.Reference, booking.ContactName, booking.ContactEmail,
+                booking.ContactPhone, booking.FromAddress, booking.ToAddress, booking.DepartureDate,
+                booking.BusName, booking.EstimatedTotal);
+        }
+        catch (Exception ex)
+        {
+            // The booking is saved; a queueing failure must not turn it into an error for the customer.
+            logger.LogError(ex, "Could not queue emails for booking {Reference}", booking.Reference);
+        }
 
         return (booking, null, null);
     }

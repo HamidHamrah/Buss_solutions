@@ -1,0 +1,39 @@
+name: Database backup
+
+# Nightly pg_dump per customer, then a restore test of the fresh dump. Add one secret per customer:
+# DATABASE_URL_NIDAROS, DATABASE_URL_HAGA, DATABASE_URL_KJOSAVIK, DATABASE_URL_TEAMTOUR.
+# Customers without a secret are skipped. See docs/OPERATIONS_RUNBOOK.md.
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        customer: [nidaros, haga, kjosavik, teamtour]
+    env:
+      DATABASE_URL: ${{ secrets[format('DATABASE_URL_{0}', upper(matrix.customer))] }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Postgres client
+        if: env.DATABASE_URL != ''
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Back up
+        if: env.DATABASE_URL != ''
+        run: scripts/backup-db.sh backups
+      - name: Restore test
+        if: env.DATABASE_URL != ''
+        run: |
+          docker run -d --name pgtest -e POSTGRES_PASSWORD=pw -p 5433:5432 postgres:16
+          until pg_isready -h localhost -p 5433; do sleep 1; done
+          ADMIN_URL=postgres://postgres:pw@localhost:5433/postgres scripts/restore-test.sh "$(ls -1t backups/*.dump | head -1)"
+      - uses: actions/upload-artifact@v4
+        if: env.DATABASE_URL != ''
+        with:
+          name: backup-${{ matrix.customer }}
+          path: backups/*.dump
+          retention-days: 14

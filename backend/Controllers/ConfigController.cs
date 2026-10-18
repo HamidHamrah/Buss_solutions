@@ -148,7 +148,7 @@ public class ConfigController(AppDbContext db) : ControllerBase
         var to = string.IsNullOrWhiteSpace(cfg.SmtpNotifyTo) ? cfg.SmtpFromAddress : cfg.SmtpNotifyTo;
         try
         {
-            await emailService.SendContactConfirmationAsync(to, "Admin", $"Test e-post fra {cfg.CompanyName}");
+            await emailService.SendTestAsync(to);
             return Ok(new { message = $"Test-e-post sendt til {to}" });
         }
         catch (Exception ex)

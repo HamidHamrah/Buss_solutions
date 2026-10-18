@@ -81,7 +81,7 @@ public class DriverTripsController(AppDbContext db, EmailService email, ISmsServ
             // Email — richer format with button
             if (!string.IsNullOrWhiteSpace(booking.ContactEmail))
             {
-                _ = email.SendTripStartedAsync(
+                await email.SendTripStartedAsync(
                     booking.ContactEmail,
                     booking.ContactName ?? "Kunde",
                     trip.TrackingToken,

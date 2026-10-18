@@ -5,7 +5,7 @@ import { clearDriverSession } from '../services/driverApi'
 import { useConfig } from '../contexts/ConfigContext'
 import { fmtDate } from '../utils/bookingHelpers'
 import {
-  LayoutDashboard, Calculator, FileText, LogOut, ChevronRight, ClipboardList, Handshake, UserCheck, Star, MapPin, HelpCircle, Inbox, CalendarDays, Receipt, Route, Bus, Search, ListChecks
+  LayoutDashboard, Calculator, FileText, LogOut, ChevronRight, ClipboardList, Handshake, UserCheck, Star, MapPin, HelpCircle, Inbox, CalendarDays, Receipt, Route, Bus, Search, ListChecks, Activity
 } from 'lucide-react'
 
 const groups = [
@@ -25,6 +25,7 @@ const groups = [
     items: [
       { to: '/admin/buses',       icon: Bus,             label: 'Busser' },
       { to: '/admin/prices',      icon: Calculator,      label: 'Priser' },
+      { to: '/admin/system',      icon: Activity,        label: 'System' },
     ],
   },
   {
