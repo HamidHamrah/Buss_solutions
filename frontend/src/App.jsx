@@ -13,6 +13,7 @@ import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import BookingPage from './pages/BookingPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
+import AdminInboxPage from './pages/admin/AdminInboxPage'
 import AdminPricesPage from './pages/admin/AdminPricesPage'
 import AdminBusesPage from './pages/admin/AdminBusesPage'
 import AdminContentPage from './pages/admin/AdminContentPage'
@@ -81,6 +82,7 @@ function App() {
           }>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="inbox" element={<AdminInboxPage />} />
             <Route path="bookings" element={<AdminBookingsPage />} />
             <Route path="invoices" element={<AdminInvoicesPage />} />
             <Route path="trips" element={<AdminTripsOverviewPage />} />

@@ -122,6 +122,8 @@ export const api = {
   getBookings: (page = 1) => request(`/api/bookings?page=${page}&pageSize=20`),
   getBooking: (id) => request(`/api/bookings/${id}`),
   getUnplannedBookings: () => request('/api/bookings/unplanned'),
+  getInbox: () => request('/api/bookings/inbox'),
+  searchBookings: (q) => request(`/api/bookings/search?q=${encodeURIComponent(q)}`),
   getBookingStats: () => request('/api/bookings/stats'),
   lookupBooking: (ref) => request(`/api/bookings/lookup/${encodeURIComponent(ref.trim().toUpperCase())}`),
   updateBookingStatus: (id, status) => request(`/api/bookings/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),

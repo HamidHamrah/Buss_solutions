@@ -90,6 +90,7 @@ builder.Services.AddScoped<BookingReferenceGenerator>();
 builder.Services.AddScoped<BookingPricingService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<BookingQueries>();
+builder.Services.AddScoped<OperationsQueries>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<AssignmentConflictChecker>();
 builder.Services.AddScoped<TripPlanningService>();

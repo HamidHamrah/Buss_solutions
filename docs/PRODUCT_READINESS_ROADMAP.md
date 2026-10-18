@@ -116,19 +116,19 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make admin feel like an operations system, not a list of unrelated pages.
 
-- [ ] Regroup sidebar navigation  
+- [x] Regroup sidebar navigation  
   Group pages into Daily Work, Setup, and Website.  
   **Done when:** Admin users can find important pages without guessing.
 
-- [ ] Add an operations inbox  
+- [x] Add an operations inbox  
   Show items that need action: new requests, unplanned bookings, missing drivers, invoices to send, overdue payments.  
   **Done when:** Admins know what to do first when they log in.
 
-- [ ] Add global search  
+- [x] Add global search  
   Search by booking reference, customer name, phone, date, invoice, or driver.  
   **Done when:** Admins can quickly find any important record.
 
-- [ ] Add next-action logic  
+- [x] Add next-action logic  
   Each booking or operation item should show the most relevant next action.  
   **Done when:** Admins do not need to remember the workflow.
 

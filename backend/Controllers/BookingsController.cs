@@ -7,7 +7,7 @@ namespace BusSolutionApi.Controllers;
 
 [ApiController]
 [Route("api/bookings")]
-public class BookingsController(BookingService bookings, BookingQueries queries, InvoiceService invoices) : ControllerBase
+public class BookingsController(BookingService bookings, BookingQueries queries, OperationsQueries operations, InvoiceService invoices) : ControllerBase
 {
     [HttpPost]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("booking")]
@@ -44,6 +44,14 @@ public class BookingsController(BookingService bookings, BookingQueries queries,
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("unplanned")]
     public async Task<IActionResult> GetUnplanned() => Ok(await queries.GetUnplannedAsync());
+
+    [Authorize(Policy = "AdminOnly")]
+    [HttpGet("inbox")]
+    public async Task<IActionResult> GetInbox() => Ok(await operations.GetInboxAsync());
+
+    [Authorize(Policy = "AdminOnly")]
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? q) => Ok(await operations.SearchAsync(q));
 
     [Authorize(Policy = "AdminOnly")]
     [HttpGet("stats")]
