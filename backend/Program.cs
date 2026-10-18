@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using BusSolutionApi.Application.Bookings;
+using BusSolutionApi.Application.Invoices;
+using BusSolutionApi.Application.Planning;
 using BusSolutionApi.Data;
 using BusSolutionApi.Services;
 using Npgsql;
@@ -83,6 +86,13 @@ builder.Services.AddSingleton<ISmsService, TwilioSmsService>();
 builder.Services.AddScoped<DriverCredentialService>();
 builder.Services.AddHttpClient("fiken");
 builder.Services.AddScoped<FikenService>();
+builder.Services.AddScoped<BookingReferenceGenerator>();
+builder.Services.AddScoped<BookingPricingService>();
+builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<BookingQueries>();
+builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<AssignmentConflictChecker>();
+builder.Services.AddScoped<TripPlanningService>();
 
 // CORS — allowed origins are configurable via Cors:AllowedOrigins (env: Cors__AllowedOrigins__0, etc.)
 // so new deploy targets (e.g. a Cloudflare Workers URL) can be added without a code change.

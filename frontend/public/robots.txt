@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.nidarostour.no/sitemap.xml
+Sitemap: https://team-tour.s362052.workers.dev/sitemap.xml

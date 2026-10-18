@@ -824,24 +824,24 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
 
           <div className="flex gap-3 flex-wrap items-center">
             <button onClick={() => printQuote(booking, company)}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:scale-[0.97] text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
               <Printer size={15} /> Pristilbud
             </button>
             {!invoiceNumber && (
               <button onClick={handleGenerateInvoice} disabled={generatingInvoice}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <Printer size={15} /> {generatingInvoice ? 'Genererer...' : 'Generer faktura'}
               </button>
             )}
             {invoiceNumber && (
               <button onClick={() => printInvoice(booking, invoiceNumber, invoiceDate, bankAccountNumber, company)}
-                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:scale-[0.97] text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <Printer size={15} /> Faktura {invoiceNumber}
               </button>
             )}
             {invoiceNumber && !invoiceSentAt && (
               <button onClick={handleSendInvoice} disabled={sendingInvoice}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <SendHorizontal size={15} /> {sendingInvoice ? 'Sender...' : 'Send faktura'}
               </button>
             )}
@@ -853,7 +853,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
             {sendError && <p className="text-xs text-red-600 w-full">{sendError}</p>}
             {invoiceNumber && (
               <button onClick={togglePaymentStatus} disabled={updatingPayment}
-                className={`flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-40 ${
+                className={`flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-xl active:scale-[0.97] transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-40 ${
                   paymentStatus === 1 ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                 }`}>
                 {paymentStatus === 1 ? <CheckCircle size={15} /> : <Clock size={15} />}
@@ -862,19 +862,19 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
             )}
             {booking.status !== 3 && booking.status !== 1 && (
               <button onClick={() => changeStatus(3)} disabled={updating}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.97] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <SendHorizontal size={15} /> Tilbud sendt
               </button>
             )}
             {booking.status !== 1 && (
               <button onClick={() => changeStatus(1)} disabled={updating}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 active:scale-[0.97] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <CheckCircle size={15} /> Bekreft
               </button>
             )}
             {booking.status !== 2 && (
               <button onClick={() => { setCancelling(true); setOpen(true) }} disabled={updating}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 active:scale-[0.97] disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-[background-color,transform] motion-reduce:transition-none">
                 <XCircle size={15} /> Avlys
               </button>
             )}

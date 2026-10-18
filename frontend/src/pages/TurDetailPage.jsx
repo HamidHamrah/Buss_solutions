@@ -113,7 +113,7 @@ export default function TurDetailPage() {
               {related.map(s => (
                 <Link key={s.slug} to={`/turer/${s.slug}`} className="group block">
                   <div className="rounded-2xl overflow-hidden aspect-[4/3] mb-4">
-                    <img src={s.heroImage} alt={s.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img src={s.heroImage} alt={s.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none" />
                   </div>
                   <h3 className="font-bold text-brand-dark text-base mb-1.5 group-hover:text-brand-blue transition-colors flex items-center gap-1.5">
                     {s.title} <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />

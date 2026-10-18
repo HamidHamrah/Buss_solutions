@@ -18,7 +18,7 @@ function ServiceCard({ service }) {
         <img
           src={service.heroImage}
           alt={service.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 motion-reduce:transition-none"
         />
       </div>
       <h3 className="font-bold text-brand-dark text-base mb-2 group-hover:text-brand-blue transition-colors flex items-center gap-1.5">

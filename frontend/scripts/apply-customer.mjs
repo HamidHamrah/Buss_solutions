@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const frontendRoot = path.resolve(__dirname, '..')
 const repoRoot = path.resolve(frontendRoot, '..')
 
-const slug = process.env.CUSTOMER_SLUG || 'kjosavik'
+const slug = process.env.CUSTOMER_SLUG || 'teamtour'
 const customerDir = path.join(repoRoot, 'customers', slug)
 const configPath = path.join(customerDir, 'config.json')
 

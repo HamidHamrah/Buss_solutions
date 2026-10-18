@@ -103,7 +103,7 @@ function TestimonialRow({ t, onSaved, onDeleted, askConfirm }) {
             <div className="flex gap-2">
               {AVATAR_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => set('avatarColor', c)}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform ${draft.avatarColor === c ? 'border-gray-800 scale-110' : 'border-transparent'}`}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform motion-reduce:transition-none ${draft.avatarColor === c ? 'border-gray-800 scale-110' : 'border-transparent'}`}
                   style={{ backgroundColor: c }} />
               ))}
             </div>

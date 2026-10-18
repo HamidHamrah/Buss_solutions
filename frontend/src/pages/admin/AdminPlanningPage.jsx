@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useConfirm } from '../../hooks/useConfirm'
+import { useClosingTransition } from '../../hooks/useClosingTransition'
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Edit2, Calendar, Phone, Mail, CalendarDays, Users, Save, ToggleLeft, ToggleRight, ChevronDown, ChevronUp, ImagePlus, Upload, Loader2, RefreshCw, Search } from 'lucide-react'
 import { api } from '../../services/api'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
@@ -217,6 +218,7 @@ function estimateEndTime(startTime, oneWayKm) {
 // ── Assignment modal ──────────────────────────────────────────────────────────
 function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookings, linkedBooking, onSave, onDelete, onClose }) {
   const [confirmModal, askConfirm] = useConfirm()
+  const { closing, close } = useClosingTransition()
   const editing = !!initial?.id
   const [form, setForm] = useState({
     busId: initial?.busId ?? (buses[0]?.externalId ?? ''),
@@ -385,11 +387,11 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
   return (
     <>
     {confirmModal}
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 motion-reduce:transition-none ${closing ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.target === e.currentTarget && close(onClose)}>
+      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-md duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-bold text-brand-dark">{editing ? 'Rediger oppgave' : 'Ny oppgave'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={() => close(onClose)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
         <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
@@ -561,9 +563,9 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
             : <span />
           }
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Avbryt</button>
+            <button onClick={() => close(onClose)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Avbryt</button>
             <button onClick={handleSave} disabled={saving}
-              className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-full transition-colors disabled:opacity-50">
+              className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
               {saving ? 'Lagrer…' : editing ? 'Oppdater' : 'Legg til'}
             </button>
           </div>
@@ -577,6 +579,7 @@ function AssignmentModal({ buses, drivers, assignments, initial, unplannedBookin
 // ── Bulk plan modal — for multi-bus orders (BusCount > 1). One screen to assign every
 // remaining bus + driver at once instead of repeating the single-assignment flow N times.
 function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
+  const { closing, close } = useClosingTransition()
   const isReturn = booking.tripType === 'return' && !!booking.returnDate
   const oneWayKm = oneWayDistanceKm(booking)
   const defaultEndTime = estimateEndTime(booking.departureTime, oneWayKm) || bumpHour(booking.departureTime) || ''
@@ -677,8 +680,8 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
   const timeInp = 'px-2.5 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue/30'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 motion-reduce:transition-none ${closing ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.target === e.currentTarget && close(onClose)}>
+      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-2xl duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <h2 className="font-bold text-brand-dark">Bulk-planlegg busser</h2>
@@ -687,7 +690,7 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
               {isReturn && ' · tur/retur (2 kjøreordre per buss)'}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={() => close(onClose)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
 
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -793,12 +796,12 @@ function BulkPlanModal({ booking, buses, drivers, onSaved, onClose }) {
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
           <span className="text-xs text-gray-400">{doneCount}/{rows.length} lagret</span>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
+            <button onClick={() => close(onClose)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">
               {allDone ? 'Lukk' : 'Avbryt'}
             </button>
             {!allDone && (
               <button onClick={saveAll} disabled={saving}
-                className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-full transition-colors disabled:opacity-50">
+                className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
                 {saving ? 'Lagrer…' : `Opprett ${rows.length - doneCount} kjøreordre`}
               </button>
             )}
@@ -814,6 +817,7 @@ const DRIVER_PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6
 
 function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
   const [confirmModal, askConfirm] = useConfirm()
+  const { closing, close } = useClosingTransition()
   const editing = !!initial?.id
   const [driver, setDriver] = useState(initial ?? null)
   const [form, setForm] = useState({
@@ -893,11 +897,11 @@ function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
   return (
     <>
     {confirmModal}
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 transition-opacity duration-150 motion-reduce:transition-none ${closing ? 'opacity-0' : 'opacity-100'}`} onClick={e => e.target === e.currentTarget && close(onClose)}>
+      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-sm duration-150 motion-reduce:animate-none ${closing ? 'animate-out fade-out zoom-out-95' : 'animate-in fade-in zoom-in-95'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-bold text-brand-dark">{editing ? 'Rediger sjåfør' : 'Ny sjåfør'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={() => close(onClose)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -958,7 +962,7 @@ function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
                   {DRIVER_PALETTE.map(c => (
                     <button key={c} onClick={() => set('color', c)}
                       style={{ backgroundColor: c }}
-                      className={`w-7 h-7 rounded-full transition-transform ${form.color === c ? 'scale-125 ring-2 ring-offset-2 ring-gray-400' : 'hover:scale-110'}`} />
+                      className={`w-7 h-7 rounded-full transition-transform motion-reduce:transition-none ${form.color === c ? 'scale-125 ring-2 ring-offset-2 ring-gray-400' : 'hover:scale-110'}`} />
                   ))}
                 </div>
               </div>
@@ -979,9 +983,9 @@ function DriverModal({ initial, onSave, onDelete, onUpdated, onClose }) {
             : <span />
           }
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500">Avbryt</button>
+            <button onClick={() => close(onClose)} className="px-4 py-2 text-sm text-gray-500">Avbryt</button>
             <button onClick={handleSave} disabled={saving || !canSave}
-              className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-full transition-colors disabled:opacity-50">
+              className="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark active:scale-[0.97] text-white text-sm font-bold rounded-full transition-[background-color,transform] motion-reduce:transition-none disabled:opacity-50">
               {saving ? 'Lagrer…' : editing ? 'Oppdater' : 'Legg til og send SMS'}
             </button>
           </div>
@@ -1248,7 +1252,7 @@ function DayView({ buses, assignments, date, onSlotClick, onAssignmentClick }) {
                           onClick={e => { e.stopPropagation(); onAssignmentClick(a) }}
                           style={{ left, width, top, height, backgroundColor: bgColor || undefined }}
                           className={`absolute rounded-lg px-2 text-left overflow-hidden text-white z-10
-                            hover:opacity-90 active:scale-95 transition-all shadow-sm
+                            hover:opacity-90 active:scale-95 transition-[opacity,transform] motion-reduce:transition-none shadow-sm
                             ${bgColor ? '' : a.driverId ? (TYPE_COLORS[a.type]?.bg || 'bg-blue-500') : 'bg-red-500'}`}>
                           <p className="text-xs font-bold truncate leading-tight mt-0.5">
                             {a.driverName || a.title || TYPE_COLORS[a.type]?.label}

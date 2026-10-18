@@ -207,28 +207,28 @@ export default function AdminInvoicesPage() {
                       <div className="flex items-center justify-end gap-3">
                         {inv.invoiceStatus === 'none' && (
                           <button onClick={() => generateInvoice(inv)} disabled={busy}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:underline disabled:opacity-40">
+                            className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:underline active:opacity-60 transition-opacity motion-reduce:transition-none disabled:opacity-40">
                             {busy ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
                             Generer faktura
                           </button>
                         )}
                         {inv.invoiceStatus !== 'none' && (
                           <button onClick={() => downloadInvoice(inv)} disabled={downloading === inv.id}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:underline disabled:opacity-40">
+                            className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:underline active:opacity-60 transition-opacity motion-reduce:transition-none disabled:opacity-40">
                             {downloading === inv.id ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                             Last ned
                           </button>
                         )}
                         {inv.invoiceStatus === 'draft' && (
                           <button onClick={() => sendInvoice(inv)} disabled={busy}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 px-2.5 py-1 rounded-full">
+                            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-40 px-2.5 py-1 rounded-full transition-[background-color,transform] motion-reduce:transition-none">
                             {busy ? <Loader2 size={12} className="animate-spin" /> : <SendHorizontal size={12} />}
                             Send faktura
                           </button>
                         )}
                         {inv.invoiceStatus === 'sent' && (
                           <button onClick={() => togglePaid(inv)} disabled={updating === inv.id}
-                            className="text-xs font-semibold text-brand-blue hover:underline disabled:opacity-40">
+                            className="text-xs font-semibold text-brand-blue hover:underline active:opacity-60 transition-opacity motion-reduce:transition-none disabled:opacity-40">
                             {inv.paymentStatus === 1 ? 'Merk ubetalt' : 'Merk betalt'}
                           </button>
                         )}

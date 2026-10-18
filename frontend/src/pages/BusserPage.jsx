@@ -61,7 +61,7 @@ export default function BusserPage() {
               <Link
                 key={bus.id}
                 to={`/busser/${bus.id}`}
-                className="group block bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200"
+                className="group block bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 motion-reduce:transition-none motion-reduce:transform-none"
               >
                 {/* Image */}
                 <div className="aspect-[16/10] bg-gray-100 overflow-hidden">
@@ -69,7 +69,7 @@ export default function BusserPage() {
                     <img
                       src={bus.images[0]}
                       alt={bus.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 motion-reduce:transition-none"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">

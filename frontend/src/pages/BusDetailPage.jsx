@@ -138,7 +138,7 @@ export default function BusDetailPage() {
                     <img
                       src={images[0]}
                       alt={bus.name}
-                      className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300"
+                      className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-300 motion-reduce:transition-none"
                     />
                   </div>
                   {images.length > 1 && (
@@ -149,7 +149,7 @@ export default function BusDetailPage() {
                           className="rounded-xl overflow-hidden aspect-square cursor-zoom-in relative"
                           onClick={() => openLightbox(i + 1)}
                         >
-                          <img src={img} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                          <img src={img} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 motion-reduce:transition-none" />
                           {i === 3 && images.length > 5 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-lg">
                               +{images.length - 5}

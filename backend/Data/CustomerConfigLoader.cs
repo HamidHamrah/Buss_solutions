@@ -169,7 +169,7 @@ public static class CustomerConfigLoader
 
     public static CustomerConfig Load(IConfiguration config)
     {
-        var slug = config["Customer:Slug"] ?? "kjosavik";
+        var slug = config["Customer:Slug"] ?? "teamtour";
         var path = ResolvePath(slug);
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<CustomerConfig>(json, JsonOptions)

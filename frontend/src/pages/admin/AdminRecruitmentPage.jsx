@@ -237,7 +237,7 @@ export default function AdminRecruitmentPage() {
               </div>
               <button onClick={() => set('recruitmentEnabled', !config.recruitmentEnabled)}
                 className={`relative inline-flex items-center w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none ${config.recruitmentEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
-                <span className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ${config.recruitmentEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                <span className={`inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 motion-reduce:transition-none ${config.recruitmentEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
           </section>
