@@ -136,23 +136,23 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make each booking easy to review, plan, invoice, and track.
 
-- [ ] Create a clearer booking detail view  
+- [x] Create a clearer booking detail view  
   Separate customer info, route, price, planning, invoice, notes, and activity.  
   **Done when:** Admins can understand a booking in under 30 seconds.
 
-- [ ] Add lifecycle timeline  
+- [x] Add lifecycle timeline  
   Show request, quoted, confirmed, planned, completed, invoiced, paid, cancelled.  
   **Done when:** The booking's current state is obvious.
 
-- [ ] Add primary next-action button  
+- [x] Add primary next-action button  
   Examples: confirm booking, create trip, assign driver, generate invoice, send invoice, mark paid.  
   **Done when:** Each booking screen has one obvious next step.
 
-- [ ] Add activity log  
+- [x] Add activity log  
   Track important changes such as status changes, price edits, trip creation, invoice sending, and payment marking.  
   **Done when:** Admins can see what happened and when.
 
-- [ ] Improve price editing  
+- [x] Improve price editing  
   Show base price, VAT, adjustments, extra charges, and final total clearly.  
   **Done when:** Admins can safely explain the price to a customer.
 

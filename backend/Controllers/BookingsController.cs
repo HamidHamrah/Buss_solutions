@@ -46,6 +46,10 @@ public class BookingsController(BookingService bookings, BookingQueries queries,
     public async Task<IActionResult> GetUnplanned() => Ok(await queries.GetUnplannedAsync());
 
     [Authorize(Policy = "AdminOnly")]
+    [HttpGet("{id:int}/activity")]
+    public async Task<IActionResult> GetActivity(int id) => Ok(await queries.GetActivityAsync(id));
+
+    [Authorize(Policy = "AdminOnly")]
     [HttpGet("inbox")]
     public async Task<IActionResult> GetInbox() => Ok(await operations.GetInboxAsync());
 

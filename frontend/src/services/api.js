@@ -122,6 +122,7 @@ export const api = {
   getBookings: (page = 1) => request(`/api/bookings?page=${page}&pageSize=20`),
   getBooking: (id) => request(`/api/bookings/${id}`),
   getUnplannedBookings: () => request('/api/bookings/unplanned'),
+  getBookingActivity: (id) => request(`/api/bookings/${id}/activity`),
   getInbox: () => request('/api/bookings/inbox'),
   searchBookings: (q) => request(`/api/bookings/search?q=${encodeURIComponent(q)}`),
   getBookingStats: () => request('/api/bookings/stats'),

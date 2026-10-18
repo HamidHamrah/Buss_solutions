@@ -21,11 +21,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TripStop> TripStops => Set<TripStop>();
     public DbSet<TripLogEntry> TripLogEntries => Set<TripLogEntry>();
     public DbSet<BusPositionPing> BusPositionPings => Set<BusPositionPing>();
+    public DbSet<BookingActivity> BookingActivities => Set<BookingActivity>();
     public DbSet<UploadedAsset> UploadedAssets => Set<UploadedAsset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var jsonOptions = new JsonSerializerOptions();
+
+        modelBuilder.Entity<BookingActivity>()
+            .HasOne(a => a.Booking).WithMany().HasForeignKey(a => a.BookingId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<BookingActivity>().HasIndex(a => a.BookingId);
 
         modelBuilder.Entity<SiteConfig>()
             .Property(e => e.CustomVariables)

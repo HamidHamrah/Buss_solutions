@@ -59,6 +59,7 @@ public class BookingService(
         pricing.ApplyClientEstimate(booking, req);
 
         db.Bookings.Add(booking);
+        db.BookingActivities.Add(new BookingActivity { Booking = booking, Type = "created", Message = "Forespørsel mottatt" });
         await db.SaveChangesAsync();
 
         var vatPct = (await db.SiteConfigs.OrderBy(c => c.Id).FirstOrDefaultAsync())?.VatPercent ?? 12;
@@ -112,6 +113,9 @@ public class BookingService(
         var booking = await db.Bookings.FindAsync(id);
         if (booking == null) return null;
 
+        var label = status switch { BookingStatus.New => "Flyttet til ny", BookingStatus.Confirmed => "Bestilling bekreftet", BookingStatus.Cancelled => "Bestilling avlyst", _ => "Tilbud sendt" };
+        if (booking.Status != status)
+            db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "status", Message = label });
         booking.Status = status;
         booking.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
@@ -123,6 +127,8 @@ public class BookingService(
         var booking = await db.Bookings.FindAsync(id);
         if (booking == null) return null;
 
+        if ((booking.AdminNotes ?? "") != (notes ?? ""))
+            db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "notes", Message = "Interne notater oppdatert" });
         booking.AdminNotes = notes;
         booking.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
@@ -136,6 +142,8 @@ public class BookingService(
         if (booking.InvoiceSentAt != null)
             return (null, "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer.");
 
+        db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "price",
+            Message = $"Prisjustering endret: {booking.PriceAdjustment:0.##} → {req.PriceAdjustment:0.##} kr" + (string.IsNullOrWhiteSpace(req.PriceAdjustmentNote) ? "" : $" ({req.PriceAdjustmentNote})") });
         booking.PriceAdjustment = req.PriceAdjustment;
         booking.PriceAdjustmentNote = req.PriceAdjustmentNote;
         pricing.RecomputeTotal(booking);
@@ -155,6 +163,7 @@ public class BookingService(
             return (null, "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer.");
 
         booking.ExtraCharges.Add(new ExtraCharge { Description = req.Description.Trim(), Amount = req.Amount });
+        db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "price", Message = $"Ekstra kostnad lagt til: {req.Description.Trim()} ({req.Amount:0.##} kr)" });
         pricing.RecomputeTotal(booking);
         booking.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
@@ -169,6 +178,7 @@ public class BookingService(
         if (booking.InvoiceSentAt != null)
             return (null, "Fakturaen er allerede sendt — beløpet er låst. Bruk kreditnota for korrigeringer.");
 
+        db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "price", Message = $"Ekstra kostnad fjernet: {booking.ExtraCharges[index].Description}" });
         booking.ExtraCharges.RemoveAt(index);
         pricing.RecomputeTotal(booking);
         booking.UpdatedAt = DateTime.UtcNow;

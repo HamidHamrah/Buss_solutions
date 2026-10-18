@@ -182,6 +182,35 @@ namespace bus_solution_api.Migrations
                     b.ToTable("Bookings");
                 });
 
+            modelBuilder.Entity("BusSolutionApi.Models.BookingActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.ToTable("BookingActivities");
+                });
+
             modelBuilder.Entity("BusSolutionApi.Models.Bus", b =>
                 {
                     b.Property<int>("Id")
@@ -1157,6 +1186,17 @@ namespace bus_solution_api.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("UploadedAssets");
+                });
+
+            modelBuilder.Entity("BusSolutionApi.Models.BookingActivity", b =>
+                {
+                    b.HasOne("BusSolutionApi.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BusSolutionApi.Models.Bus", b =>

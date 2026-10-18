@@ -110,6 +110,9 @@ public class TripPlanningService(AppDbContext db, AssignmentConflictChecker conf
         };
 
         db.BusAssignments.Add(assignment);
+        if (req.BookingId != null && assignment.Type == "trip")
+            db.BookingActivities.Add(new BookingActivity { BookingId = req.BookingId.Value, Type = "trip",
+                Message = $"Kjøreordre opprettet ({req.BusId}, {assignment.StartDate:dd.MM.yyyy})" });
         await db.SaveChangesAsync();
 
         var saved = await db.BusAssignments.Include(a => a.Driver).FirstAsync(a => a.Id == assignment.Id);
@@ -151,6 +154,8 @@ public class TripPlanningService(AppDbContext db, AssignmentConflictChecker conf
         var assignment = await db.BusAssignments.FindAsync(id);
         if (assignment == null) return false;
 
+        if (assignment.BookingId != null && assignment.Type == "trip")
+            db.BookingActivities.Add(new BookingActivity { BookingId = assignment.BookingId.Value, Type = "trip", Message = $"Kjøreordre slettet ({assignment.StartDate:dd.MM.yyyy})" });
         db.BusAssignments.Remove(assignment);
         await db.SaveChangesAsync();
         return true;

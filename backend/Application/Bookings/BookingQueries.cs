@@ -18,6 +18,10 @@ public class BookingQueries(AppDbContext db)
         return new { total, page, pageSize, bookings };
     }
 
+    public async Task<List<object>> GetActivityAsync(int id) =>
+        (await db.BookingActivities.Where(a => a.BookingId == id).OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
+            .Select(a => new { a.Id, a.Type, a.Message, a.CreatedAt }).ToListAsync()).Cast<object>().ToList();
+
     public Task<Booking?> GetByIdAsync(int id) => db.Bookings.FindAsync(id).AsTask();
 
     public async Task<object> GetUnplannedAsync()

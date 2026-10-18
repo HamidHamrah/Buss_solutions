@@ -16,6 +16,7 @@ public class InvoiceService(AppDbContext db, FikenService fiken)
             return new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate };
 
         await GenerateInvoiceForBookingAsync(booking);
+        db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "invoice", Message = $"Faktura {booking.InvoiceNumber} opprettet" });
         await db.SaveChangesAsync();
 
         return new { invoiceNumber = booking.InvoiceNumber, invoiceDate = booking.InvoiceDate };
@@ -61,6 +62,7 @@ public class InvoiceService(AppDbContext db, FikenService fiken)
         booking.FikenInvoiceId = fikenId;
         booking.FikenSyncedAt = sentAt;
         booking.InvoiceSentAt = sentAt;
+        db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "invoice", Message = $"Faktura {booking.InvoiceNumber} sendt til kunden" });
         await db.SaveChangesAsync();
 
         return (new { sentAt = booking.InvoiceSentAt, fikenInvoiceId = booking.FikenInvoiceId }, null, 200);
@@ -73,6 +75,8 @@ public class InvoiceService(AppDbContext db, FikenService fiken)
         if (string.IsNullOrEmpty(booking.InvoiceNumber))
             return (null, "Bestillingen har ingen faktura ennå.");
 
+        if (booking.PaymentStatus != paymentStatus)
+            db.BookingActivities.Add(new BookingActivity { BookingId = id, Type = "payment", Message = paymentStatus == PaymentStatus.Paid ? "Markert som betalt" : "Betaling tilbakestilt" });
         booking.PaymentStatus = paymentStatus;
         booking.PaidDate = paymentStatus == PaymentStatus.Paid ? DateTime.UtcNow : null;
         booking.UpdatedAt = DateTime.UtcNow;

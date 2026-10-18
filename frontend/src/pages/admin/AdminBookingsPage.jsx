@@ -8,6 +8,7 @@ import AddressInput from '../../components/AddressInput'
 import TripMap from '../../components/admin/TripMap'
 import { toDateTimeLocal, buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 import { printInvoice } from '../../utils/printInvoice'
+import { LifecycleTimeline, PriceBreakdown, ActivityLog, Section, lifecycle } from '../../components/admin/BookingDetailParts'
 
 // ── Kjøreordre (trip planning) ─────────────────────────────────────────────────
 const TRIP_STATUS_LABELS = { 0: 'Planlagt', 1: 'Pågår', 2: 'Fullført', 3: 'Avlyst' }
@@ -18,7 +19,7 @@ const TRIP_STATUS_COLORS = {
   3: 'bg-red-100 text-red-600',
 }
 
-function TripPlanningPanel({ booking, autoExpandTripId }) {
+function TripPlanningPanel({ booking, autoExpandTripId, onTripsChange }) {
   const [loading, setLoading] = useState(true)
   const [trips, setTrips] = useState([])
   const [buses, setBuses] = useState([])
@@ -50,6 +51,7 @@ function TripPlanningPanel({ booking, autoExpandTripId }) {
   }, [booking.id, autoExpandTripId])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { if (!loading) onTripsChange?.(trips) }, [trips, loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const createTrip = async () => {
     setCreating(true)
@@ -518,6 +520,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
   const [updatingPayment, setUpdatingPayment] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [trips, setTrips] = useState([])
 
   const handleGenerateInvoice = async () => {
     setGeneratingInvoice(true)
@@ -630,6 +633,25 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
     setSavingNotes(false)
   }
 
+  const life = lifecycle(booking, trips, { invoiceSentAt, paymentStatus })
+  const activityKey = [booking.status, invoiceNumber, invoiceSentAt, paymentStatus, total, extraCharges.length, trips.length, notesSaved, priceSaved].join('|')
+  const unassigned = life.active.some(t => t.status === 0 && !t.driverId)
+
+  const goToTrips = () => document.getElementById(`trips-${booking.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+  // The single most relevant next step for this booking's current lifecycle state.
+  const nextAction = (() => {
+    if (booking.status === 2) return null
+    if (booking.status !== 1) return { label: 'Bekreft bestilling', icon: CheckCircle, onClick: () => changeStatus(1), busy: updating }
+    if (!life.fullyPlanned) return { label: life.planned === 0 ? 'Opprett kjøreordre' : `Planlegg ${booking.busCount - life.planned} buss til`, icon: BusIcon, onClick: goToTrips }
+    if (unassigned) return { label: 'Tildel sjåfør', icon: User, onClick: goToTrips }
+    if (!life.allDone && !invoiceNumber) return { hint: 'Venter på at turen gjennomføres' }
+    if (!invoiceNumber) return { label: 'Generer faktura', icon: Printer, onClick: handleGenerateInvoice, busy: generatingInvoice }
+    if (!invoiceSentAt) return { label: 'Send faktura', icon: SendHorizontal, onClick: handleSendInvoice, busy: sendingInvoice }
+    if (paymentStatus !== 1) return { label: 'Merk som betalt', icon: CheckCircle, onClick: togglePaymentStatus, busy: updatingPayment }
+    return { hint: 'Ferdig – ingen handling nødvendig' }
+  })()
+
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-colors ${selected ? 'border-brand-blue ring-1 ring-brand-blue/20' : 'border-gray-200'}`}>
       <div className="flex items-center gap-3 px-5 py-4">
@@ -659,7 +681,48 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
       </div>
 
       {open && (
-        <div className="border-t border-gray-100 px-5 py-5 space-y-5">
+        <div className="border-t border-gray-100 px-5 py-5 space-y-6">
+          <div className="space-y-4">
+            <LifecycleTimeline booking={booking} steps={life.steps} />
+            {nextAction && (
+              nextAction.hint ? (
+                <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">{nextAction.hint}</p>
+              ) : (
+                <div className="flex items-center justify-between gap-3 bg-brand-blue/5 border border-brand-blue/20 rounded-lg px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-xs text-gray-500">Neste steg</p>
+                    <p className="text-sm font-semibold text-brand-dark">{nextAction.label}</p>
+                  </div>
+                  <button onClick={nextAction.onClick} disabled={nextAction.busy || updating}
+                    className="shrink-0 flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors">
+                    <nextAction.icon size={15} /> {nextAction.busy ? 'Jobber…' : nextAction.label}
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+
+          <Section title="Kunde">
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <a href={`tel:${booking.contactPhone}`} className="flex items-center gap-1.5 text-brand-blue hover:underline">
+                <Phone size={13} /> {booking.contactPhone}
+              </a>
+              <a href={`mailto:${booking.contactEmail}`} className="flex items-center gap-1.5 text-brand-blue hover:underline">
+                <Mail size={13} /> {booking.contactEmail}
+              </a>
+              {booking.orgName && (
+                <span className="flex items-center gap-1.5 text-gray-600">
+                  <Building size={13} /> {booking.orgName} {booking.orgNumber && `(${booking.orgNumber})`}
+                </span>
+              )}
+            </div>
+            {booking.message && <p className="text-sm text-gray-600 mt-2 italic">"{booking.message}"</p>}
+          </div>
+
+          </Section>
+
+          <Section title="Rute og avreise">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div><p className="text-xs text-gray-400 mb-1">Referanse</p><p className="font-mono font-semibold text-brand-dark">{booking.reference}</p></div>
             <div><p className="text-xs text-gray-400 mb-1">Avreise</p><p className="font-semibold">{new Date(booking.departureDate).toLocaleDateString('nb-NO')} kl. {booking.departureTime}</p></div>
@@ -675,11 +738,38 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
             {booking.tripType === 'return' && booking.returnDate && (
               <div><p className="text-xs text-gray-400 mb-1">Returdato</p><p className="font-semibold">{new Date(booking.returnDate).toLocaleDateString('nb-NO')} kl. {booking.returnTime || '–'}</p></div>
             )}
-            <div><p className="text-xs text-gray-400 mb-1">Pris eks. MVA</p><p className="font-semibold">{booking.estimatedBase?.toLocaleString('nb-NO')} kr</p></div>
-            <div><p className="text-xs text-gray-400 mb-1">MVA</p><p className="font-semibold">{booking.estimatedVat?.toLocaleString('nb-NO')} kr</p></div>
-            <div><p className="text-xs text-gray-400 mb-1">Total inkl. MVA</p><p className="font-bold text-brand-blue">{total?.toLocaleString('nb-NO')} kr</p></div>
           </div>
 
+          </Section>
+
+          {/* Stops */}
+          {booking.stops?.length > 0 && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Stopp underveis ({booking.stops.length})</p>
+              <ol className="space-y-1">
+                {booking.stops.map((s, i) => (
+                  <li key={i} className="text-amber-900 flex gap-2"><span className="text-amber-400 font-bold">{i + 1}.</span>{s}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Extras & special needs */}
+          {(booking.needsTrailer || booking.needsWheelchair || booking.selectedExtras?.length > 0) && (
+            <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-sm">
+              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-2">Spesielle behov / tillegg</p>
+              <ul className="space-y-1">
+                {booking.needsTrailer    && <li className="text-orange-900 flex gap-2"><span>🚛</span> Trenger tilhenger</li>}
+                {booking.needsWheelchair && <li className="text-orange-900 flex gap-2"><span>♿</span> Trenger rullestolvogn</li>}
+                {booking.selectedExtras?.map(e => (
+                  <li key={e} className="text-orange-900 flex gap-2"><span>➕</span> {e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <Section title="Pris">
+          <PriceBreakdown booking={booking} total={total} extraCharges={extraCharges} />
           {/* Price adjustment */}
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -754,59 +844,18 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
             )}
           </div>
 
-          {/* Stops */}
-          {booking.stops?.length > 0 && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-sm">
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Stopp underveis ({booking.stops.length})</p>
-              <ol className="space-y-1">
-                {booking.stops.map((s, i) => (
-                  <li key={i} className="text-amber-900 flex gap-2"><span className="text-amber-400 font-bold">{i + 1}.</span>{s}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-
-          {/* Extras & special needs */}
-          {(booking.needsTrailer || booking.needsWheelchair || booking.selectedExtras?.length > 0) && (
-            <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-sm">
-              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-2">Spesielle behov / tillegg</p>
-              <ul className="space-y-1">
-                {booking.needsTrailer    && <li className="text-orange-900 flex gap-2"><span>🚛</span> Trenger tilhenger</li>}
-                {booking.needsWheelchair && <li className="text-orange-900 flex gap-2"><span>♿</span> Trenger rullestolvogn</li>}
-                {booking.selectedExtras?.map(e => (
-                  <li key={e} className="text-orange-900 flex gap-2"><span>➕</span> {e}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Kontaktinfo</p>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <a href={`tel:${booking.contactPhone}`} className="flex items-center gap-1.5 text-brand-blue hover:underline">
-                <Phone size={13} /> {booking.contactPhone}
-              </a>
-              <a href={`mailto:${booking.contactEmail}`} className="flex items-center gap-1.5 text-brand-blue hover:underline">
-                <Mail size={13} /> {booking.contactEmail}
-              </a>
-              {booking.orgName && (
-                <span className="flex items-center gap-1.5 text-gray-600">
-                  <Building size={13} /> {booking.orgName} {booking.orgNumber && `(${booking.orgNumber})`}
-                </span>
-              )}
-            </div>
-            {booking.message && <p className="text-sm text-gray-600 mt-2 italic">"{booking.message}"</p>}
-          </div>
+          </Section>
 
           {/* Kjøreordre */}
-          <div className="border border-gray-200 rounded-xl px-4 py-3.5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Kjøreordre</p>
-            <TripPlanningPanel booking={booking} autoExpandTripId={autoExpandTripId} />
+          <div id={`trips-${booking.id}`}>
+            <Section title="Planlegging og kjøreordre">
+              <TripPlanningPanel booking={booking} autoExpandTripId={autoExpandTripId} onTripsChange={setTrips} />
+            </Section>
           </div>
 
           {/* Internal notes */}
-          <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Interne notater</p>
+          <Section title="Interne notater">
+            <div>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
@@ -820,7 +869,12 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
               className="mt-2 px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-white transition-colors">
               {notesSaved ? '✓ Lagret' : savingNotes ? 'Lagrer...' : 'Lagre notater'}
             </button>
-          </div>
+            </div>
+          </Section>
+
+          <Section title="Aktivitet">
+            <ActivityLog booking={booking} refreshKey={activityKey} />
+          </Section>
 
           <div className="flex gap-3 flex-wrap items-center">
             <button onClick={() => printQuote(booking, company)}
