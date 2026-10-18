@@ -204,23 +204,23 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make the product feel alive without becoming flashy.
 
-- [ ] Add better loading states  
+- [x] Add better loading states  
   Use skeletons, inline spinners, and clear saving states.  
   **Done when:** Users always know when the app is working.
 
-- [ ] Animate booking step transitions  
+- [x] Animate booking step transitions  
   Add subtle transitions between customer booking steps.  
   **Done when:** The flow feels smoother and less static.
 
-- [ ] Animate route drawing  
+- [x] Animate route drawing  
   Draw or reveal the route line when route calculation completes.  
   **Done when:** Route calculation feels like a real interaction.
 
-- [ ] Add status change feedback  
+- [x] Add status change feedback  
   Show small transitions or confirmations when booking, trip, invoice, or payment status changes.  
   **Done when:** Admin actions feel responsive and reliable.
 
-- [ ] Improve modal and panel transitions  
+- [x] Improve modal and panel transitions  
   Make admin modals, drawers, and expandable panels open/close smoothly.  
   **Done when:** The admin UI feels modern but still practical.
 
