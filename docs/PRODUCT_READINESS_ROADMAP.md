@@ -184,19 +184,19 @@ The goal is not to make the product "finished forever". The goal is to reach a s
 
 **Goal:** Make invoicing safe, clear, and trustworthy.
 
-- [ ] Add invoice preview  
+- [x] Add invoice preview  
   Show customer, email, invoice lines, amount, due date, and Fiken status before sending.  
   **Done when:** Admins can verify everything before sending.
 
-- [ ] Add send confirmation  
+- [x] Add send confirmation  
   Confirm before emailing the invoice through Fiken.  
   **Done when:** Admins cannot accidentally send an invoice.
 
-- [ ] Improve invoice filters  
+- [x] Improve invoice filters  
   Add filters like ready to invoice, draft, sent, overdue, paid.  
   **Done when:** Finance work is easy to prioritize.
 
-- [ ] Add payment history/status history  
+- [x] Add payment history/status history  
   Show when invoices were sent, marked paid, or changed.  
   **Done when:** Payment state is auditable.
 

@@ -1,5 +1,6 @@
 using BusSolutionApi.Data;
 using BusSolutionApi.Models;
+using BusSolutionApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusSolutionApi.Application.Bookings;
@@ -121,6 +122,10 @@ public class BookingQueries(AppDbContext db)
             .Distinct()
             .ToListAsync()).ToHashSet();
 
+        var siteConfig = await db.SiteConfigs.FirstOrDefaultAsync();
+        var fikenConfigured = siteConfig != null && FikenService.IsConfigured(siteConfig);
+        var now = DateTime.UtcNow;
+
         var bookings = await db.Bookings
             .Where(b => b.Status == BookingStatus.Confirmed || b.InvoiceNumber != null)
             .OrderByDescending(b => b.DepartureDate)
@@ -137,6 +142,9 @@ public class BookingQueries(AppDbContext db)
                 : inProgressBookingIds.Contains(b.Id) ? "in_progress"
                 : "planned";
             var invoiceStatus = b.InvoiceSentAt != null ? "sent" : b.InvoiceNumber != null ? "draft" : "none";
+            DateTime? dueDate = b.InvoiceDate?.AddDays(14);
+            var overdue = invoiceStatus == "sent" && b.PaymentStatus == PaymentStatus.Unpaid && dueDate < now;
+            var readyToInvoice = invoiceStatus == "none" && b.Status == BookingStatus.Confirmed && tripStatus == "completed";
 
             return new
             {
@@ -144,6 +152,8 @@ public class BookingQueries(AppDbContext db)
                 b.InvoiceNumber, b.InvoiceDate, b.InvoiceSentAt,
                 b.EstimatedTotal, b.PaymentStatus, b.PaidDate,
                 busesPlanned = planned, b.BusCount, tripStatus, invoiceStatus,
+                b.ContactEmail, dueDate, overdue, readyToInvoice,
+                b.FikenInvoiceId, b.FikenSyncedAt, fikenConfigured,
             };
         })
         .Where(x => status switch
@@ -151,6 +161,8 @@ public class BookingQueries(AppDbContext db)
             "none" => x.invoiceStatus == "none",
             "draft" => x.invoiceStatus == "draft",
             "sent" => x.invoiceStatus == "sent",
+            "ready" => x.readyToInvoice,
+            "overdue" => x.overdue,
             "unpaid" => x.invoiceStatus == "sent" && x.PaymentStatus == PaymentStatus.Unpaid,
             "paid" => x.PaymentStatus == PaymentStatus.Paid,
             _ => true,

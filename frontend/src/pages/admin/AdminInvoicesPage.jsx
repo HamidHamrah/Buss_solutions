@@ -1,26 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, Circle, AlertTriangle, Download, Loader2, SendHorizontal, FileText, Bus, Route } from 'lucide-react'
+import { CheckCircle2, Circle, AlertTriangle, Download, Loader2, SendHorizontal, FileText, Bus, Route, Eye } from 'lucide-react'
 import { api } from '../../services/api'
 import { useConfig } from '../../contexts/ConfigContext'
 import { printInvoice } from '../../utils/printInvoice'
+import { useConfirm } from '../../hooks/useConfirm'
+import InvoicePreviewModal from '../../components/admin/InvoicePreviewModal'
 
 const fmtKr = (n) => (n ?? 0).toLocaleString('nb-NO') + ' kr'
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('nb-NO') : '–'
-const dueDate = (invoiceDate) => {
-  if (!invoiceDate) return null
-  const d = new Date(invoiceDate)
-  d.setDate(d.getDate() + 14)
-  return d
-}
 
 const FILTERS = [
-  { key: 'all', label: 'Alle' },
-  { key: 'none', label: 'Ikke fakturert' },
-  { key: 'draft', label: 'Kladd' },
-  { key: 'sent', label: 'Sendt' },
-  { key: 'unpaid', label: 'Ubetalt' },
-  { key: 'paid', label: 'Betalt' },
+  { key: 'all', label: 'Alle', test: () => true },
+  { key: 'ready', label: 'Klar til fakturering', test: i => i.readyToInvoice, accent: 'text-blue-600' },
+  { key: 'draft', label: 'Kladd', test: i => i.invoiceStatus === 'draft' },
+  { key: 'sent', label: 'Sendt', test: i => i.invoiceStatus === 'sent' },
+  { key: 'unpaid', label: 'Ubetalt', test: i => i.invoiceStatus === 'sent' && i.paymentStatus === 0 },
+  { key: 'overdue', label: 'Forfalt', test: i => i.overdue, accent: 'text-red-600' },
+  { key: 'paid', label: 'Betalt', test: i => i.paymentStatus === 1 },
+  { key: 'none', label: 'Ikke fakturert', test: i => i.invoiceStatus === 'none' },
 ]
 
 const TRIP_STATUS = {
@@ -47,7 +45,9 @@ export default function AdminInvoicesPage() {
     email: config?.content?.email || '',
     phone: config?.content?.phone || '',
   }
-  const [invoices, setInvoices] = useState([])
+  const [confirmModal, askConfirm] = useConfirm()
+  const [preview, setPreview] = useState(null)
+  const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [updating, setUpdating] = useState(null)
@@ -57,15 +57,26 @@ export default function AdminInvoicesPage() {
 
   const load = () => {
     setLoading(true)
-    api.getInvoices(filter === 'all' ? undefined : filter)
-      .then(setInvoices)
+    api.getInvoices()
+      .then(setAll)
       .catch(() => {})
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [filter])
+  useEffect(() => { load() }, [])
+
+  const activeFilter = FILTERS.find(f => f.key === filter) ?? FILTERS[0]
+  const invoices = all.filter(activeFilter.test)
 
   const togglePaid = async (inv) => {
+    const markingPaid = inv.paymentStatus !== 1
+    if (!await askConfirm({
+      title: markingPaid ? 'Merk som betalt' : 'Tilbakestill betaling',
+      message: markingPaid
+        ? `Marker faktura ${inv.invoiceNumber} (${fmtKr(inv.estimatedTotal)}) som betalt?`
+        : `Tilbakestill betalingen på faktura ${inv.invoiceNumber} til ubetalt?`,
+      confirmLabel: markingPaid ? 'Merk betalt' : 'Merk ubetalt', danger: !markingPaid,
+    })) return
     setUpdating(inv.id)
     try {
       await api.updatePaymentStatus(inv.id, inv.paymentStatus === 1 ? 0 : 1)
@@ -95,19 +106,7 @@ export default function AdminInvoicesPage() {
     setActionLoading(null)
   }
 
-  const sendInvoice = async (inv) => {
-    setActionLoading(inv.id)
-    setActionError(null)
-    try {
-      await api.sendInvoice(inv.id)
-      load()
-    } catch (e) {
-      setActionError({ id: inv.id, message: e?.message || 'Kunne ikke sende faktura.' })
-    }
-    setActionLoading(null)
-  }
-
-  const invoiced = invoices.filter(inv => inv.invoiceStatus !== 'none')
+  const invoiced = all.filter(inv => inv.invoiceStatus !== 'none')
   const totals = invoiced.reduce((acc, inv) => {
     acc.total += inv.estimatedTotal
     if (inv.paymentStatus === 1) acc.paid += inv.estimatedTotal
@@ -117,6 +116,10 @@ export default function AdminInvoicesPage() {
 
   return (
     <div>
+      {confirmModal}
+      {all.find(i => i.id === preview) && (
+        <InvoicePreviewModal inv={all.find(i => i.id === preview)} onClose={() => setPreview(null)} onSent={load} />
+      )}
       <h1 className="text-xl font-bold text-brand-dark mb-1">Fakturaer</h1>
       <p className="text-sm text-gray-400 mb-6">Planlegging, fakturastatus og betaling — samlet oversikt.</p>
 
@@ -140,6 +143,10 @@ export default function AdminInvoicesPage() {
           <button key={f.key} onClick={() => setFilter(f.key)}
             className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${filter === f.key ? 'bg-brand-dark text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'}`}>
             {f.label}
+            {f.key !== 'all' && (() => {
+              const n = all.filter(f.test).length
+              return n > 0 ? <span className={`ml-1.5 text-xs font-bold ${filter === f.key ? 'text-white/70' : f.accent || 'text-gray-400'}`}>{n}</span> : null
+            })()}
           </button>
         ))}
       </div>
@@ -159,8 +166,7 @@ export default function AdminInvoicesPage() {
           </thead>
           <tbody>
             {invoices.map(inv => {
-              const due = dueDate(inv.invoiceDate)
-              const overdue = inv.invoiceStatus === 'sent' && inv.paymentStatus === 0 && due && due < new Date()
+              const overdue = inv.overdue
               const trip = TRIP_STATUS[inv.tripStatus] ?? TRIP_STATUS.unplanned
               const inv_ = INVOICE_STATUS[inv.invoiceStatus] ?? INVOICE_STATUS.none
               const busy = actionLoading === inv.id
@@ -220,10 +226,15 @@ export default function AdminInvoicesPage() {
                           </button>
                         )}
                         {inv.invoiceStatus === 'draft' && (
-                          <button onClick={() => sendInvoice(inv)} disabled={busy}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] disabled:opacity-40 px-2.5 py-1 rounded-full transition-[background-color,transform] motion-reduce:transition-none">
-                            {busy ? <Loader2 size={12} className="animate-spin" /> : <SendHorizontal size={12} />}
-                            Send faktura
+                          <button onClick={() => setPreview(inv.id)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-[0.97] px-2.5 py-1 rounded-full transition-[background-color,transform] motion-reduce:transition-none">
+                            <SendHorizontal size={12} /> Forhåndsvis og send
+                          </button>
+                        )}
+                        {inv.invoiceStatus === 'sent' && (
+                          <button onClick={() => setPreview(inv.id)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-brand-blue active:opacity-60 transition-colors motion-reduce:transition-none">
+                            <Eye size={12} /> Detaljer
                           </button>
                         )}
                         {inv.invoiceStatus === 'sent' && (
@@ -245,7 +256,7 @@ export default function AdminInvoicesPage() {
               )
             })}
             {!loading && invoices.length === 0 && (
-              <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">Ingen bestillinger funnet.</td></tr>
+              <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400 text-sm">{all.length ? 'Ingen fakturaer i dette filteret.' : 'Ingen bestillinger funnet.'}</td></tr>
             )}
           </tbody>
         </table>

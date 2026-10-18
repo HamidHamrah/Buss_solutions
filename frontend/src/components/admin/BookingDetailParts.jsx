@@ -77,7 +77,7 @@ export function PriceBreakdown({ booking, total, extraCharges }) {
 
 const TYPE_DOT = { created: 'bg-gray-400', status: 'bg-blue-500', price: 'bg-amber-500', trip: 'bg-indigo-500', invoice: 'bg-purple-500', payment: 'bg-green-500', notes: 'bg-gray-400' }
 
-export function ActivityLog({ booking, refreshKey }) {
+export function ActivityLog({ booking, refreshKey, types }) {
   const [items, setItems] = useState(null)
 
   useEffect(() => {
@@ -87,9 +87,12 @@ export function ActivityLog({ booking, refreshKey }) {
   }, [booking.id, refreshKey])
 
   if (!items) return <p className="text-sm text-gray-400">Laster aktivitet…</p>
-  const list = items.some(i => i.type === 'created')
-    ? items
-    : [...items, { id: 'created', type: 'created', message: 'Forespørsel mottatt', createdAt: booking.createdAt }]
+  const list = types
+    ? items.filter(i => types.includes(i.type))
+    : items.some(i => i.type === 'created')
+      ? items
+      : [...items, { id: 'created', type: 'created', message: 'Forespørsel mottatt', createdAt: booking.createdAt }]
+  if (types && list.length === 0) return <p className="text-sm text-gray-400">Ingen hendelser ennå.</p>
 
   return (
     <ul className="space-y-2.5">

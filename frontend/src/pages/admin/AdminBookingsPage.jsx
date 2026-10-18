@@ -503,6 +503,7 @@ const STATUS_COLORS = {
 }
 
 function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccountNumber = '', company = {}, selectable = false, selected = false, onToggleSelect, defaultOpen = false, autoExpandTripId }) {
+  const [confirmModal, askConfirm] = useConfirm()
   const [open, setOpen] = useState(defaultOpen)
   const [updating, setUpdating] = useState(false)
   const [notes, setNotes] = useState(booking.adminNotes || '')
@@ -543,6 +544,11 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
   // The explicit step that actually pushes to Fiken and emails the customer — kept separate
   // from generation so the admin can review/adjust price and extra charges first.
   const handleSendInvoice = async () => {
+    if (!await askConfirm({
+      title: 'Send faktura',
+      message: `Faktura ${invoiceNumber} (${total?.toLocaleString('nb-NO')} kr) sendes på e-post til ${booking.contactEmail} via Fiken. Dette kan ikke angres.`,
+      confirmLabel: 'Send faktura', danger: false,
+    })) return
     setSendingInvoice(true)
     setSendError(null)
     try {
@@ -662,6 +668,7 @@ function BookingCard({ booking, onStatusChange, showMoveToNew = false, bankAccou
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-colors ${selected ? 'border-brand-blue ring-1 ring-brand-blue/20' : 'border-gray-200'}`}>
+      {confirmModal}
       <div className="flex items-center gap-3 px-5 py-4">
         {selectable && (
           <button onClick={e => { e.stopPropagation(); onToggleSelect?.(booking.id) }}

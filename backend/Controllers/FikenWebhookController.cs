@@ -50,6 +50,7 @@ public class FikenWebhookController(AppDbContext db, ILogger<FikenWebhookControl
                 booking.PaymentStatus = PaymentStatus.Paid;
                 booking.PaidDate = DateTime.UtcNow;
                 booking.UpdatedAt = DateTime.UtcNow;
+                db.BookingActivities.Add(new BookingActivity { BookingId = booking.Id, Type = "payment", Message = "Betaling mottatt via Fiken" });
                 await db.SaveChangesAsync();
                 logger.LogInformation("Booking {Ref} marked paid via Fiken webhook", booking.Reference);
             }
