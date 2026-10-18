@@ -7,6 +7,12 @@ import { useToast } from '../../contexts/ToastContext'
 import { findConflicts, ConflictNotice, blockStatusClass, StatusBadge, UnplannedQueue } from '../../components/admin/PlanningParts'
 import { buildStopsFromBooking, stopsToPayload } from '../../utils/bookingHelpers'
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const TYPE_COLORS = {
+  trip:        { bg: 'bg-blue-500',   text: 'text-white', label: 'Tur' },
+  maintenance: { bg: 'bg-amber-500',  text: 'text-white', label: 'Vedlikehold' },
+  other:       { bg: 'bg-gray-500',   text: 'text-white', label: 'Annet' },
+}
 const NO_ID = '__none__'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
