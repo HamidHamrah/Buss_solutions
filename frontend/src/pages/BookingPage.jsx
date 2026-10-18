@@ -9,7 +9,7 @@ import { api } from '../services/api'
 import { useSeo } from '../hooks/useSeo'
 import AddressInput from '../components/AddressInput'
 import RoutePreview from '../components/booking/RoutePreview'
-import { Disclosure, StopList, TripSummary } from '../components/booking/BookingParts'
+import { Disclosure, StopList, TripSummary, MobileSummaryBar } from '../components/booking/BookingParts'
 import { fmtKr, fmtMin, fmtDate, shortAddr, calcRouteDistance } from '../utils/bookingHelpers'
 import { calcTripPrice } from '../services/config'
 
@@ -628,7 +628,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {!done && (
-        <div className="bg-brand-dark text-white">
+        <div className="bg-brand-dark text-white pt-12">
           <ol className="max-w-5xl mx-auto px-4 flex items-center gap-2 py-4 overflow-x-auto">
             {STEPS.map((s, i) => (
               <li key={s} className="flex items-center gap-2 flex-shrink-0">
@@ -648,7 +648,7 @@ export default function BookingPage() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className={`max-w-5xl mx-auto px-4 py-8 ${done ? 'pt-16' : price ? 'pb-24 lg:pb-8' : ''}`}>
         {done ? (
           <SuccessView state={state} bookingRef={bookingRef} category={category} price={price} content={content} />
         ) : (
@@ -668,7 +668,7 @@ export default function BookingPage() {
               )}
 
               {step < 3 && (
-                <div className="flex justify-end mt-8">
+                <div className={`flex justify-end mt-8 ${price ? 'hidden lg:flex' : ''}`}>
                   <button type="button" onClick={() => goTo(step + 1)} disabled={!canNext()}
                     className="flex items-center justify-center gap-2 w-full sm:w-auto bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-lg text-sm transition-colors">
                     Neste <ChevronRight size={16} />
@@ -678,7 +678,8 @@ export default function BookingPage() {
             </div>
 
             <TripSummary state={state} routeStatus={auto.status} route={auto.route} km={km} category={category} price={price}
-              className="order-first lg:order-none lg:sticky lg:top-6" />
+              className="hidden lg:block lg:sticky lg:top-6" />
+            <MobileSummaryBar action={step < 3 ? { label: 'Neste', onClick: () => goTo(step + 1), disabled: !canNext() } : null} state={state} routeStatus={auto.status} route={auto.route} km={km} category={category} price={price} />
           </div>
         )}
 

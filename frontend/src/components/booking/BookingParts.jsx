@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Plus, X, ArrowRight, Route as RouteIcon, Calendar, Users, Bus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, X, ArrowRight, Route as RouteIcon, Calendar, Users, Bus } from 'lucide-react'
 import AddressInput from '../AddressInput'
 import { fmtKr, fmtMin, fmtDate, shortAddr } from '../../utils/bookingHelpers'
 
@@ -123,5 +123,35 @@ export function TripSummary({ state, routeStatus, route, km, category, price, cl
         </div>
       </div>
     </aside>
+  )
+}
+
+// Mobile-only bottom bar: appears once a price exists, always shows it, expands to the full
+// summary on tap, and can carry the step's primary action next to the price.
+export function MobileSummaryBar({ action, ...props }) {
+  const [open, setOpen] = useState(false)
+  const { state, price } = props
+  if (!price) return null
+  return (
+    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+      {open && <div className="max-h-[70vh] overflow-y-auto p-3 border-b border-gray-100"><TripSummary {...props} className="border-0" /></div>}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="flex-1 min-w-0 text-left">
+          <span className="flex items-center gap-1 text-xs text-gray-500">
+            <span className="truncate">
+              {state.from?.lat && state.to?.lat ? `${shortAddr(state.from)} → ${shortAddr(state.to)}` : 'Din reise'}
+            </span>
+            <ChevronDown size={12} className={`flex-shrink-0 transition-transform motion-reduce:transition-none ${open ? '' : 'rotate-180'}`} />
+          </span>
+          <span className="block font-black text-brand-dark tabular-nums">{fmtKr(price.total)}</span>
+        </button>
+        {action && (
+          <button type="button" onClick={action.onClick} disabled={action.disabled}
+            className="flex-shrink-0 flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-40 text-white font-bold px-6 py-3 rounded-lg text-sm transition-colors">
+            {action.label} <ChevronRight size={16} />
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
