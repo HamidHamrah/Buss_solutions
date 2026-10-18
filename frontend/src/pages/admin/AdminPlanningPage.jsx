@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useConfirm } from '../../hooks/useConfirm'
 import { useClosingTransition } from '../../hooks/useClosingTransition'
-import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Calendar, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Bus as BusIcon, Calendar, Search, Check } from 'lucide-react'
 import { api } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
 import { findConflicts, ConflictNotice, blockStatusClass, StatusBadge, UnplannedQueue } from '../../components/admin/PlanningParts'
@@ -705,7 +705,7 @@ function BulkPlanModal({ booking, buses, drivers, assignments, onSaved, onClose 
 }
 
 // ── Month Gantt view ──────────────────────────────────────────────────────────
-const DAY_W = 38
+const DAY_MIN_W = 30
 
 function buildLanes(blocks) {
   const lanes = []
@@ -743,17 +743,22 @@ function MonthGantt({ buses, assignments, year, month, onCellClick, onAssignment
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-      <table className="border-collapse" style={{ minWidth: `${180 + days * DAY_W}px` }}>
+      {/* Fixed layout: the days share the available width, so the whole month fits without side-scrolling on laptops */}
+      <table className="border-collapse w-full" style={{ minWidth: `${160 + days * DAY_MIN_W}px`, tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: 160 }} />
+          {dayNums.map(d => <col key={d} />)}
+        </colgroup>
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 min-w-[180px]">Buss</th>
+            <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Buss</th>
             {dayNums.map(d => {
               const dt = new Date(year, month, d)
               const dow = (dt.getDay() + 6) % 7
               const isToday = dateKey(dt) === today
               const isWeekend = dow >= 5
               return (
-                <th key={d} style={{ width: DAY_W, minWidth: DAY_W }}
+                <th key={d}
                   className={`text-center py-2 text-xs font-semibold border-l border-gray-100
                     ${isToday ? 'bg-brand-blue text-white' : isWeekend ? 'bg-gray-100 text-gray-400' : 'text-gray-500'}`}>
                   <div>{d}</div>
@@ -803,7 +808,6 @@ function MonthGantt({ buses, assignments, year, month, onCellClick, onAssignment
                     const span = block?.span ?? 1
                     return (
                       <td key={d} colSpan={block ? span : 1}
-                        style={{ width: block ? DAY_W * span : DAY_W, minWidth: block ? DAY_W * span : DAY_W }}
                         className={`border-l border-gray-100 p-0.5 ${isToday && !block ? 'bg-brand-blue/5' : isWeekend && !block ? 'bg-gray-50/70' : ''}`}
                         onClick={() => isFirst && !block && onCellClick(bus.externalId, dateKey(dt))}>
                         {block ? (
@@ -1133,11 +1137,10 @@ export default function AdminPlanningPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-black text-brand-dark">Planlegger</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Kalender og tildeling av busser og sjåfører</p>
+          <p className="text-sm text-gray-500">Kalender og tildeling av busser og sjåfører</p>
         </div>
           <button onClick={() => setAssignModal({ initial: null })}
-            className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold px-5 py-2.5 rounded-full text-sm transition-colors">
+            className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold px-4 py-2 rounded-full text-sm transition-colors">
             <Plus size={15} /> Ny oppgave
           </button>
       </div>
@@ -1186,7 +1189,7 @@ export default function AdminPlanningPage() {
             </div>
           )}
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] items-start">
+          <div className={`grid gap-4 items-start ${unplannedBookings.length ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}`}>
           <div className="space-y-4 min-w-0">
           {/* Nav bar */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -1251,11 +1254,18 @@ export default function AdminPlanningPage() {
             <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 ring-2 ring-blue-300" />Pågår</span>
             <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 opacity-60" />Fullført</span>
             <span className="text-xs text-gray-400">· Farge følger sjåfør når valgt</span>
+            {unplannedBookings.length === 0 && (
+              <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                <Check size={12} /> Alle bestillinger er planlagt
+              </span>
+            )}
           </div>
           </div>
-          <div className="xl:sticky xl:top-4">
-            <UnplannedQueue bookings={unplannedBookings} onPlan={handlePlanBooking} />
-          </div>
+          {unplannedBookings.length > 0 && (
+            <div className="xl:sticky xl:top-4">
+              <UnplannedQueue bookings={unplannedBookings} onPlan={handlePlanBooking} />
+            </div>
+          )}
           </div>
         </div>
 
