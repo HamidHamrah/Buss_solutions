@@ -1,9 +1,9 @@
 name: Promote main to customer(s)
 
 # The only thing that ever pushes to a deploy/<slug> branch. Moving that
-# branch forward is what triggers a customer's Render + Cloudflare redeploy
-# (see render.yaml's per-service `branch:` and the deploy-*.yml workflows'
-# trigger branches) — so this is the canary/staged-rollout lever: promote one
+# branch forward triggers a customer's Render redeploy; the matching Cloudflare
+# workflow is dispatched explicitly on that branch — so this is the
+# canary/staged-rollout lever: promote one
 # customer, watch it, then promote the rest individually or all at once.
 #
 # Always a plain (non-force) push, since nothing should ever commit directly
@@ -29,25 +29,28 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
-          # Must use a PAT here — pushes via GITHUB_TOKEN do not trigger
-          # downstream workflows (deploy-*.yml), so the Cloudflare deploy
-          # would never fire. A PAT push is treated as a user push and does.
-          token: ${{ secrets.GH_PAT }}
 
       - name: Promote selected customer(s)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CUSTOMER: ${{ inputs.customer }}
         run: |
           set -e
           ALL_SLUGS="kjosavik nidaros teamtour haga"
-          if [ "${{ inputs.customer }}" = "all" ]; then
+          if [ "$CUSTOMER" = "all" ]; then
             SLUGS="$ALL_SLUGS"
           else
-            SLUGS="${{ inputs.customer }}"
+            SLUGS="$CUSTOMER"
           fi
           for slug in $SLUGS; do
             echo "Promoting main -> deploy/$slug"
             git push origin "main:deploy/$slug"
+            # GITHUB_TOKEN pushes do not trigger push workflows; dispatch explicitly.
+            gh workflow run "deploy-$slug.yml" --ref "deploy/$slug"
           done

@@ -45,6 +45,19 @@ Run `restore-test.sh` against a fresh dump regularly; an untested backup is not 
 
 ## Tests and CI
 
+### Customer promotion
+
+Run **Promote main to customer(s)** in GitHub Actions, selecting one customer or `all`.
+It fast-forwards each selected `deploy/<slug>` branch to `main` without force-pushing,
+then explicitly dispatches that customer's frontend deployment on the promoted branch.
+Render follows the branch through its own Git integration.
+
+Promotion uses the repository's automatic `GITHUB_TOKEN` with `contents: write` and
+`actions: write`; no `GH_PAT` secret is needed. Explicit dispatch is required because
+pushes made with `GITHUB_TOKEN` do not trigger other push workflows.
+
+### Application tests
+
 `dotnet test backend.Tests` runs pricing unit tests; database tests (booking validation, server
 pricing, invoice numbering, conflict checks, outbox, audit) need a Postgres user that can create
 databases: `TEST_PG="Host=localhost;Username=postgres;Database=postgres"`. CI does this on every
