@@ -100,6 +100,7 @@ public static class CustomerConfigLoader
         public string Description { get; set; } = "";
         public List<string> Images { get; set; } = [];
         public List<string> Amenities { get; set; } = [];
+        public string RegistrationNumber { get; set; } = "";
         public int SortOrder { get; set; }
     }
 

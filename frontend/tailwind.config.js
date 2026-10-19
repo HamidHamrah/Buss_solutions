@@ -5,13 +5,15 @@ export default {
     extend: {
       colors: {
         brand: {
-          blue: '#1a4f8a',
-          'blue-dark': '#153e6e',
-          'blue-light': '#2563b0',
-          'blue-pale': '#e8f0f9',
+          // Per-customer palette: CSS variables are generated from customers/<slug>/config.json by scripts/apply-customer.mjs
+          blue: 'rgb(var(--brand-blue) / <alpha-value>)',
+          'blue-dark': 'rgb(var(--brand-blue-dark) / <alpha-value>)',
+          'blue-light': 'rgb(var(--brand-blue-light) / <alpha-value>)',
+          'blue-pale': 'rgb(var(--brand-blue-pale) / <alpha-value>)',
+          'light-blue': 'rgb(var(--brand-light-blue) / <alpha-value>)',
+          sidebar: 'rgb(var(--brand-sidebar) / <alpha-value>)',
           dark: '#1a1a1a',
           gray: '#4a4a4a',
-          'light-blue': '#dbeafe',
         },
       },
       fontFamily: {

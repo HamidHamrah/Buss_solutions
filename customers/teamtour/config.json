@@ -12,12 +12,22 @@
     "foundingYear": "1975",
     "geoLat": 59.744,
     "geoLng": 10.2045,
-    "openingHoursDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    "openingHoursDays": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+    ],
     "openingHoursOpen": "07:00",
     "openingHoursClose": "17:00",
     "openingHoursText": "Man–fre: 07:00–17:00",
     "emergencyAvailabilityText": "Beredskapsvakt: 24/7",
-    "footerCertifications": ["Euro 5 & 6", "Etablert 1975", "Drammen"]
+    "footerCertifications": [
+      "Euro 5 & 6",
+      "Etablert 1975",
+      "Drammen"
+    ]
   },
   "social": {
     "facebook": "https://www.facebook.com/teamtour",
@@ -34,6 +44,9 @@
     "logoIncludesText": true,
     "favicon": "favicon.svg",
     "ogImage": "og-image.jpg"
+  },
+  "theme": {
+    "primary": "#0a6b1e"
   },
   "adminSeed": {
     "initialPhone": "90000000",
@@ -52,8 +65,18 @@
     "minInvoice": 3000
   },
   "priceCategories": [
-    { "name": "Minibuss", "kmRate": 14, "hourRate": 650, "sortOrder": 1 },
-    { "name": "Stor buss", "kmRate": 22, "hourRate": 1100, "sortOrder": 2 }
+    {
+      "name": "Minibuss",
+      "kmRate": 14,
+      "hourRate": 650,
+      "sortOrder": 1
+    },
+    {
+      "name": "Stor buss",
+      "kmRate": 22,
+      "hourRate": 1100,
+      "sortOrder": 2
+    }
   ],
   "fleet": [
     {
@@ -61,10 +84,17 @@
       "name": "Volvo S80 Limousine",
       "seats": 8,
       "priceCategory": "Minibuss",
-      "description": "VIP-limousine for mindre grupper, flyplasstransport og eksklusive oppdrag.",
-      "images": ["https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=600&q=80"],
-      "amenities": ["Klimaanlegg", "Skinnseter", "220 Volt"],
-      "sortOrder": 1
+      "description": "VIP-limousine for mindre grupper, flyplasstransport og eksklusive oppdrag. Årsmodell 2001.",
+      "images": [
+        "https://images.unsplash.com/photo-1570125909517-53cb21c89ff2?w=600&q=80"
+      ],
+      "amenities": [
+        "Klimaanlegg",
+        "Skinnseter",
+        "220 Volt"
+      ],
+      "sortOrder": 1,
+      "registrationNumber": "DJ98670"
     },
     {
       "externalId": "prinsen",
@@ -72,9 +102,18 @@
       "seats": 50,
       "priceCategory": "Stor buss",
       "description": "Komfortabel turbuss med god bagasjeplass, godt egnet for dagsturer og lengre reiser.",
-      "images": ["https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"],
-      "amenities": ["Wifi", "Klimaanlegg", "220 Volt", "WC", "Bagasjerom"],
-      "sortOrder": 2
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [
+        "Wifi",
+        "Klimaanlegg",
+        "220 Volt",
+        "WC",
+        "Bagasjerom"
+      ],
+      "sortOrder": 2,
+      "registrationNumber": "KJ30102"
     },
     {
       "externalId": "bukken-bruse",
@@ -82,9 +121,18 @@
       "seats": 54,
       "priceCategory": "Stor buss",
       "description": "Romslig turbuss for store grupper, med høy komfort- og sikkerhetsstandard.",
-      "images": ["https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80"],
-      "amenities": ["Wifi", "Klimaanlegg", "220 Volt", "WC", "Bagasjerom"],
-      "sortOrder": 3
+      "images": [
+        "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80"
+      ],
+      "amenities": [
+        "Wifi",
+        "Klimaanlegg",
+        "220 Volt",
+        "WC",
+        "Bagasjerom"
+      ],
+      "sortOrder": 3,
+      "registrationNumber": "KJ30104"
     },
     {
       "externalId": "kongen",
@@ -92,9 +140,83 @@
       "seats": 52,
       "priceCategory": "Stor buss",
       "description": "Erfaren turbuss i flåten, fortsatt i toppstand og godt egnet for charterturer.",
-      "images": ["https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=600&q=80"],
-      "amenities": ["Wifi", "Klimaanlegg", "220 Volt", "WC", "Bagasjerom"],
-      "sortOrder": 4
+      "images": [
+        "https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=600&q=80"
+      ],
+      "amenities": [
+        "Wifi",
+        "Klimaanlegg",
+        "220 Volt",
+        "WC",
+        "Bagasjerom"
+      ],
+      "sortOrder": 4,
+      "registrationNumber": "KH81761"
+    },
+    {
+      "externalId": "tyrihans",
+      "name": "Tyrihans",
+      "seats": 46,
+      "priceCategory": "Stor buss",
+      "description": "Turbuss med 46 sitteplasser, årsmodell 2018.",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [],
+      "registrationNumber": "KJ39306",
+      "sortOrder": 5
+    },
+    {
+      "externalId": "s315hd",
+      "name": "S315HD",
+      "seats": 46,
+      "priceCategory": "Stor buss",
+      "description": "Turbuss med 46 sitteplasser, årsmodell 2001.",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [],
+      "registrationNumber": "KF98709",
+      "sortOrder": 6
+    },
+    {
+      "externalId": "hone-pone",
+      "name": "Høne Pøne",
+      "seats": 46,
+      "priceCategory": "Stor buss",
+      "description": "Turbuss med 46 sitteplasser, årsmodell 2019.",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [],
+      "registrationNumber": "KJ42733",
+      "sortOrder": 7
+    },
+    {
+      "externalId": "gasse-vasse",
+      "name": "Gasse Vasse",
+      "seats": 50,
+      "priceCategory": "Stor buss",
+      "description": "Turbuss med 50 sitteplasser, årsmodell 2019.",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [],
+      "registrationNumber": "KJ42737",
+      "sortOrder": 8
+    },
+    {
+      "externalId": "prinsessa",
+      "name": "Prinsessa",
+      "seats": 46,
+      "priceCategory": "Stor buss",
+      "description": "Turbuss med 46 sitteplasser, årsmodell 2017.",
+      "images": [
+        "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+      ],
+      "amenities": [],
+      "registrationNumber": "KJ32362",
+      "sortOrder": 9
     }
   ],
   "content": {
@@ -149,7 +271,9 @@
   "deployment": {
     "renderServiceName": "team-tour-api",
     "cloudflareWorkerName": "team-tour",
-    "corsOrigins": ["https://team-tour.s362052.workers.dev"],
+    "corsOrigins": [
+      "https://team-tour.s362052.workers.dev"
+    ],
     "jwtIssuer": "team-tour-api",
     "jwtAudience": "team-tour-web",
     "emailFromAddress": "post@teamtour.no",

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/apply-customer.mjs",
     "prebuild": "node scripts/apply-customer.mjs",
     "build": "vite build",
     "lint": "oxlint",

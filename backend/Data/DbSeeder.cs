@@ -140,6 +140,7 @@ public static class DbSeeder
             ExternalId = b.ExternalId,
             Name = b.Name,
             Seats = b.Seats,
+            RegistrationNumber = b.RegistrationNumber,
             Description = b.Description,
             Images = b.Images,
             Amenities = b.Amenities,
