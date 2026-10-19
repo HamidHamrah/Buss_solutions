@@ -813,18 +813,18 @@ function MonthGantt({ buses, assignments, year, month, onCellClick, onAssignment
                         {block ? (
                           <button onClick={e => { e.stopPropagation(); onAssignmentClick(block) }}
                             style={block.driverColor && (block.driverId || block.type !== 'trip') ? { backgroundColor: block.driverColor } : undefined}
-                            title={`${block.title || ''}${block.driverName ? ` · ${block.driverName}` : ' · Ingen sjåfør'}`}
-                            className={`w-full rounded-lg flex flex-col items-start px-2 py-1 overflow-hidden text-white hover:opacity-90 transition-opacity
+                            title={`${block.title || ''}${block.driverName ? ` · ${block.driverName}` : ' · Ingen sjåfør'}${block.startTime ? ` · ${block.startTime}${block.endTime ? `–${block.endTime}` : ''}` : ''}`}
+                            className={`w-full rounded-lg flex flex-col items-start justify-center px-2 py-1 overflow-hidden ${block.span > 1 ? '' : 'h-8'} text-white hover:opacity-90 transition-opacity
                               ${blockStatusClass(block)} ${!block.driverId && block.type === 'trip' ? 'bg-red-500' : block.driverColor ? '' : TYPE_COLORS[block.type]?.bg}`}>
                             <span className="flex items-center gap-1 text-xs font-semibold truncate leading-tight w-full">
                               <StatusBadge a={block} />
                               <span className="truncate">{block.driverName || TYPE_COLORS[block.type]?.label}</span>
                             </span>
                             {block.title && block.span > 1 && <span className="text-[10px] opacity-90 truncate w-full leading-tight">{block.title}</span>}
-                            {(block.startTime || block.endTime) && (
+                            {block.span > 1 && (block.startTime || block.endTime) && (
                               <span className="text-[10px] opacity-80">{block.startTime}{block.endTime ? `–${block.endTime}` : ''}</span>
                             )}
-                            {!block.driverId && block.type === 'trip' && <span className="text-[9px] font-semibold">Mangler sjåfør</span>}
+                            {block.span > 1 && !block.driverId && block.type === 'trip' && <span className="text-[9px] font-semibold">Mangler sjåfør</span>}
                           </button>
                         ) : isFirst ? (
                           <div className="w-full h-8 rounded-lg hover:bg-brand-blue/10 cursor-pointer transition-colors flex items-center justify-center group">
@@ -1231,6 +1231,11 @@ export default function AdminPlanningPage() {
               className="flex items-center gap-1.5 text-xs font-semibold text-brand-blue hover:text-brand-blue-dark px-3 py-1.5 rounded-full border border-brand-blue/30 hover:bg-brand-blue/5 transition-colors">
               <Calendar size={12} /> I dag
             </button>
+            {unplannedBookings.length === 0 && (
+              <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
+                <Check size={12} /> Alle bestillinger er planlagt
+              </span>
+            )}
           </div>
 
           {loading ? (
@@ -1254,11 +1259,6 @@ export default function AdminPlanningPage() {
             <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 ring-2 ring-blue-300" />Pågår</span>
             <span className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded bg-blue-500 opacity-60" />Fullført</span>
             <span className="text-xs text-gray-400">· Farge følger sjåfør når valgt</span>
-            {unplannedBookings.length === 0 && (
-              <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                <Check size={12} /> Alle bestillinger er planlagt
-              </span>
-            )}
           </div>
           </div>
           {unplannedBookings.length > 0 && (
