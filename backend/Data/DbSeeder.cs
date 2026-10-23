@@ -145,6 +145,7 @@ public static class DbSeeder
             Images = b.Images,
             Amenities = b.Amenities,
             Active = true,
+            ShowOnWebsite = true,
             SortOrder = b.SortOrder,
             PriceCategory = categoriesByName[b.PriceCategory]
         }));
