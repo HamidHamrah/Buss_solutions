@@ -1,4 +1,5 @@
 import { calcTripPrice } from '../services/config'
+import { computeRoute } from '../services/googleMaps'
 
 // Price for one bus on a given route — uses the bus's own price category rates
 // when set, otherwise falls back to the site's global pricing.
@@ -26,22 +27,11 @@ export function fmtMin(secs) {
   return h > 0 ? `${h} timer ${m} min` : `${m} min`
 }
 
-// Calls the public OSRM routing API for driving distance/duration through a
-// from → stops → to waypoint chain. Throws on failure; caller decides how to
-// surface that (both the public wizard and the admin quick-entry form call this).
-export async function calcRouteDistance(from, to, stops = []) {
-  const waypoints = [
-    { lon: from.lon, lat: from.lat },
-    ...stops.filter(s => s.lat && s.lon).map(s => ({ lon: s.lon, lat: s.lat })),
-    { lon: to.lon, lat: to.lat },
-  ]
-  const coords = waypoints.map(w => `${w.lon},${w.lat}`).join(';')
-  const res = await fetch(
-    `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`
-  )
-  const data = await res.json()
-  if (!data.routes?.[0]) throw new Error('Kunne ikke beregne ruten.')
-  return data.routes[0]
+// Driving distance/duration through a from → stops → to waypoint chain (Google Routes API).
+// Throws on failure; caller decides how to surface that (both the public wizard and the admin
+// quick-entry form call this). Resolves to { distance (m), duration (s), geometry: { coordinates } }.
+export function calcRouteDistance(from, to, stops = []) {
+  return computeRoute(from, to, stops)
 }
 
 export function toDateTimeLocal(date) {

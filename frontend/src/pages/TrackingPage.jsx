@@ -1,23 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
-import L from 'leaflet'
+import { useMap } from '@vis.gl/react-google-maps'
+import { GoogleMap, DotMarker } from '../components/maps/GoogleMap'
 import { api } from '../services/api'
-
-// Fix default icon paths broken by bundlers
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-})
-
-const busIcon = L.divIcon({
-  html: `<div style="background:#2563eb;width:38px;height:38px;border-radius:50%;border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1">🚌</div>`,
-  className: '',
-  iconSize: [38, 38],
-  iconAnchor: [19, 19],
-})
 
 const STATUS_LABEL = { 0: 'Planlagt', 1: 'Underveis', 2: 'Fullført', 3: 'Avlyst' }
 const STATUS_COLOR = { 0: 'bg-gray-100 text-gray-600', 1: 'bg-blue-100 text-blue-700', 2: 'bg-green-100 text-green-700', 3: 'bg-red-100 text-red-700' }
@@ -26,7 +11,7 @@ const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('nb-NO', { hour: '2-di
 
 function RecenterMap({ lat, lng }) {
   const map = useMap()
-  useEffect(() => { map.setView([lat, lng], map.getZoom()) }, [lat, lng, map])
+  useEffect(() => { map?.panTo({ lat, lng }) }, [lat, lng, map])
   return null
 }
 
@@ -101,21 +86,15 @@ export default function TrackingPage() {
       {/* Map */}
       <div className="flex-1 relative" style={{ minHeight: '450px' }}>
         {hasPosition ? (
-          <MapContainer
-            center={[info.latitude, info.longitude]}
+          <GoogleMap
+            center={{ lat: info.latitude, lng: info.longitude }}
             zoom={14}
             style={{ width: '100%', height: '100%', minHeight: '450px' }}
-            zoomControl={true}
           >
-            <TileLayer
-              attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={[info.latitude, info.longitude]} icon={busIcon}>
-              <Popup>{info.title || 'Bussen er her'}</Popup>
-            </Marker>
+            <DotMarker position={{ lat: info.latitude, lng: info.longitude }} color="#2563eb" size={38}
+              title={info.title || 'Bussen er her'}>🚌</DotMarker>
             <RecenterMap lat={info.latitude} lng={info.longitude} />
-          </MapContainer>
+          </GoogleMap>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
             <div className="text-center p-6">

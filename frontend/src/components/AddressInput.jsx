@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { MapPin } from 'lucide-react'
+import { autocompletePlaces, placeLocation, newPlacesSession } from '../services/googleMaps'
 
-// Address autocomplete backed by OpenStreetMap Nominatim — shared between the public
+// Address autocomplete backed by Google Places (New) — shared between the public
 // booking wizard and the admin quick-entry form so both search the same way.
 export default function AddressInput({ label, value, onChange, placeholder }) {
   const [query, setQuery] = useState(value?.address || '')
   const [suggestions, setSuggestions] = useState([])
   const [open, setOpen] = useState(false)
   const timer = useRef(null)
+  const session = useRef(newPlacesSession()) // one billing session per search-then-pick
 
   useEffect(() => { setQuery(value?.address || '') }, [value?.address])
 
@@ -16,12 +18,7 @@ export default function AddressInput({ label, value, onChange, placeholder }) {
     clearTimeout(timer.current)
     timer.current = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
-          { headers: { 'Accept-Language': 'no' } }
-        )
-        const data = await res.json()
-        setSuggestions(data)
+        setSuggestions(await autocompletePlaces(q, session.current))
         setOpen(true)
       } catch {}
     }, 350)
@@ -46,18 +43,24 @@ export default function AddressInput({ label, value, onChange, placeholder }) {
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
           {suggestions.map((s) => (
             <li
-              key={s.place_id}
+              key={s.placeId}
               className="px-4 py-2.5 text-sm hover:bg-brand-blue-pale cursor-pointer border-b border-gray-50 last:border-0"
-              onMouseDown={() => {
-                const addr = s.display_name.split(',').slice(0, 3).join(',')
-                setQuery(addr)
+              onMouseDown={async () => {
+                setQuery(s.text)
                 setSuggestions([])
                 setOpen(false)
-                onChange({ address: addr, lat: parseFloat(s.lat), lon: parseFloat(s.lon) })
+                try {
+                  const loc = await placeLocation(s.placeId, session.current)
+                  onChange({ address: s.text, ...loc })
+                } catch {
+                  onChange({ address: s.text, lat: null, lon: null })
+                } finally {
+                  session.current = newPlacesSession()
+                }
               }}
             >
-              <span className="font-medium">{s.display_name.split(',')[0]}</span>
-              <span className="text-gray-400 text-xs block">{s.display_name.split(',').slice(1, 3).join(',')}</span>
+              <span className="font-medium">{s.main}</span>
+              <span className="text-gray-400 text-xs block">{s.secondary}</span>
             </li>
           ))}
         </ul>

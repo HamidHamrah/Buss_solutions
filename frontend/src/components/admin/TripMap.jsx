@@ -1,22 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
 import { calcRouteDistance } from '../../utils/bookingHelpers'
-
-// Same marker style as the public booking page's route map, for visual consistency.
-const stopIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41],
-})
-
-const busIcon = new L.DivIcon({
-  html: '<div style="background:#2563eb;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 6px rgba(37,99,235,0.7);"></div>',
-  className: '',
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-})
+import { GoogleMap, FitBounds, RoutePolyline, DotMarker } from '../maps/GoogleMap'
 
 function minutesAgo(iso) {
   if (!iso) return null
@@ -29,7 +13,7 @@ export default function TripMap({ stops, currentLatitude, currentLongitude, posi
 
   const located = (stops || []).filter(s => s.latitude != null && s.longitude != null)
   const locatedKey = located.map(s => `${s.latitude},${s.longitude}`).join('|')
-  const traveledCoords = (traveledPath || []).map(p => [p.latitude, p.longitude])
+  const traveledCoords = (traveledPath || []).map(p => ({ lat: p.latitude, lng: p.longitude }))
 
   useEffect(() => {
     if (located.length < 2) { setRouteCoords([]); return }
@@ -39,7 +23,7 @@ export default function TripMap({ stops, currentLatitude, currentLongitude, posi
     const via = located.slice(1, -1).map(s => ({ lat: s.latitude, lon: s.longitude }))
     setRouteError(false)
     calcRouteDistance(from, to, via)
-      .then(route => { if (active) setRouteCoords(route.geometry.coordinates.map(([lon, lat]) => [lat, lon])) })
+      .then(route => { if (active) setRouteCoords(route.geometry.coordinates.map(([lon, lat]) => ({ lat, lng: lon }))) })
       .catch(() => { if (active) setRouteError(true) })
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,32 +42,29 @@ export default function TripMap({ stops, currentLatitude, currentLongitude, posi
   }
 
   const center = hasPosition
-    ? [currentLatitude, currentLongitude]
+    ? { lat: currentLatitude, lng: currentLongitude }
     : located.length > 0
-      ? [located[0].latitude, located[0].longitude]
+      ? { lat: located[0].latitude, lng: located[0].longitude }
       : traveledCoords[traveledCoords.length - 1]
+
+  // Stops only: refitting on every live position update would fight the user's own zoom/pan.
+  const fitPoints = located.map(s => ({ lat: s.latitude, lng: s.longitude }))
 
   return (
     <div className="space-y-2">
       <div className="rounded-xl overflow-hidden border border-gray-200" style={{ height: 280 }}>
-        <MapContainer center={center} zoom={hasPosition ? 11 : 7} style={{ height: '100%', width: '100%' }}>
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            attribution="&copy; OpenStreetMap &copy; CARTO" />
-          {routeCoords.length > 0 && <Polyline positions={routeCoords} color="#1e3a8a" weight={4} opacity={0.7} />}
-          {traveledCoords.length > 1 && (
-            <Polyline positions={traveledCoords} color="#dc2626" weight={3} opacity={0.8} dashArray="6 6" />
-          )}
+        <GoogleMap center={center} zoom={hasPosition ? 11 : 7} style={{ height: '100%', width: '100%' }}>
+          {routeCoords.length > 0 && <RoutePolyline path={routeCoords} color="#1e3a8a" weight={4} opacity={0.7} />}
+          {traveledCoords.length > 1 && <RoutePolyline path={traveledCoords} color="#dc2626" weight={3} opacity={0.8} dashed />}
           {located.map((s, i) => (
-            <Marker key={i} position={[s.latitude, s.longitude]} icon={stopIcon}>
-              <Popup>{s.name}</Popup>
-            </Marker>
+            <DotMarker key={i} position={{ lat: s.latitude, lng: s.longitude }} color="#175c8e" title={s.name} />
           ))}
           {hasPosition && (
-            <Marker position={[currentLatitude, currentLongitude]} icon={busIcon}>
-              <Popup>Buss {stale ? `(sist sett for ${age} min siden)` : '(nå)'}</Popup>
-            </Marker>
+            <DotMarker position={{ lat: currentLatitude, lng: currentLongitude }} color="#2563eb" size={20}
+              title={`Buss ${stale ? `(sist sett for ${age} min siden)` : '(nå)'}`} />
           )}
-        </MapContainer>
+          {fitPoints.length > 1 && <FitBounds points={fitPoints} maxZoom={13} />}
+        </GoogleMap>
       </div>
       {hasPosition ? (
         <p className={`text-xs ${stale ? 'text-amber-600' : 'text-green-700'}`}>
