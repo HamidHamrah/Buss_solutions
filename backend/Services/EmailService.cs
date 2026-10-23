@@ -63,7 +63,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
         var cells = string.Concat(rows.Select(r => $"""
             <tr>
               <td style="padding:8px 12px;font-size:13px;color:#6b7280;white-space:nowrap;vertical-align:top">{r.Label}</td>
-              <td style="padding:8px 12px;font-size:13px;color:#111827;font-weight:600">{r.Value}</td>
+              <td style="padding:8px 12px;font-size:13px;color:#111827;font-weight:600">{System.Net.WebUtility.HtmlEncode(r.Value)}</td>
             </tr>
             """));
         return $"""
@@ -75,7 +75,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
     }
 
     private static string H2(string text) =>
-        $"<h2 style=\"margin:0 0 8px;font-size:20px;color:#1a3a5c\">{text}</h2>";
+        $"<h2 style=\"margin:0 0 8px;font-size:20px;color:#1a3a5c\">{System.Net.WebUtility.HtmlEncode(text)}</h2>";
 
     private static string P(string html) =>
         $"<p style=\"margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151\">{html}</p>";
@@ -219,7 +219,7 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
             {InfoTable(rows)}
             {Divider()}
             <div style="background-color:#f8f9fb;border-left:3px solid #1a3a5c;padding:14px 16px;border-radius:0 4px 4px 0;font-size:14px;color:#374151;line-height:1.6">
-              {messageText.Replace("\n", "<br/>")}
+              {System.Net.WebUtility.HtmlEncode(messageText).Replace("\n", "<br/>")}
             </div>
             """;
 
@@ -236,9 +236,9 @@ public class EmailService(EmailSettings settings, AppDbContext db, ILogger<Email
     {
         var company = await GetCompanyInfoAsync();
         var body = $"""
-            {P($"Hei {toName},")}
+            {P($"Hei {System.Net.WebUtility.HtmlEncode(toName)},")}
             <div style="background-color:#f8f9fb;border-left:3px solid #1a3a5c;padding:14px 16px;border-radius:0 4px 4px 0;font-size:14px;color:#374151;line-height:1.6;margin:0 0 16px">
-              {replyText.Replace("\n", "<br/>")}
+              {System.Net.WebUtility.HtmlEncode(replyText).Replace("\n", "<br/>")}
             </div>
             """;
 

@@ -2,6 +2,7 @@ name: Database backup
 
 # Nightly pg_dump per customer, then a restore test of the fresh dump. Add one secret per customer:
 # DATABASE_URL_NIDAROS, DATABASE_URL_HAGA, DATABASE_URL_KJOSAVIK, DATABASE_URL_TEAMTOUR.
+# Plus BACKUP_PASSPHRASE: dumps are GPG-encrypted before upload (decrypt: gpg -d file.dump.gpg > file.dump).
 # Customers without a secret are skipped. See docs/OPERATIONS_RUNBOOK.md.
 on:
   schedule:
@@ -31,9 +32,19 @@ jobs:
           docker run -d --name pgtest -e POSTGRES_PASSWORD=pw -p 5433:5432 postgres:16
           until pg_isready -h localhost -p 5433; do sleep 1; done
           ADMIN_URL=postgres://postgres:pw@localhost:5433/postgres scripts/restore-test.sh "$(ls -1t backups/*.dump | head -1)"
+      - name: Encrypt dumps
+        if: env.DATABASE_URL != ''
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE secret is required"; exit 1; }
+          for f in backups/*.dump; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 -o "$f.gpg" "$f"
+          done
+          rm -f backups/*.dump
       - uses: actions/upload-artifact@v4
         if: env.DATABASE_URL != ''
         with:
           name: backup-${{ matrix.customer }}
-          path: backups/*.dump
-          retention-days: 14
+          path: backups/*.dump.gpg
+          retention-days: 7

@@ -12,8 +12,16 @@ namespace BusSolutionApi.Controllers;
 public class ContactController(AppDbContext db, EmailService email) : ControllerBase
 {
     [HttpPost]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("booking")]
     public async Task<IActionResult> Submit([FromBody] ContactRequest req)
     {
+        if (string.IsNullOrWhiteSpace(req.Name) || req.Name.Length > 100
+            || string.IsNullOrWhiteSpace(req.Subject) || req.Subject.Length > 200
+            || string.IsNullOrWhiteSpace(req.Message) || req.Message.Length > 5000
+            || (req.Phone?.Length ?? 0) > 30
+            || !System.Net.Mail.MailAddress.TryCreate(req.Email, out var addr) || addr.Address != req.Email.Trim() || req.Email.Length > 200)
+            return BadRequest(new { error = "Ugyldig skjemadata" });
+
         var msg = new ContactMessage
         {
             Name = req.Name, Email = req.Email, Phone = req.Phone ?? "",
